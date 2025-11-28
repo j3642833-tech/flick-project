@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Search — Flick</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root{--bg:#f6f6f8;--card:#fff;--muted:#777;--accent:#111;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;background:var(--bg);color:#111}
+  .top-bar{position:sticky;top:0;background:#fff;border-bottom:1px solid #e6e6e9;display:flex;align-items:center;padding:12px;gap:10px;z-index:30}
+  .top-bar .back{font-size:18px;cursor:pointer;padding:6px;border-radius:8px;background:transparent;border:none}
+  .top-bar h2{flex:1;text-align:center;margin:0;font-weight:700}
+  .search-wrap{padding:14px}
+  .search-box{display:flex;gap:8px;align-items:center;background:var(--card);padding:8px;border-radius:12px;border:1px solid #eee}
+  .search-box input{flex:1;border:0;outline:0;font-size:16px;padding:6px;background:transparent}
+  .search-box button{border:0;background:transparent;font-size:18px;cursor:pointer}
+  .tabs{display:flex;gap:8px;padding:12px 14px;overflow:auto}
+  .tab{padding:8px 12px;border-radius:999px;background:var(--card);border:1px solid #eee;cursor:pointer;white-space:nowrap;font-weight:600}
+  .tab.active{background:linear-gradient(90deg,#fff,#fff);border-color:#111;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+  .controls{display:flex;gap:10px;justify-content:flex-end;padding:0 14px 12px}
+  .controls button{background:var(--card);border:1px solid #eee;padding:8px 12px;border-radius:12px;cursor:pointer}
+  .results{padding:0 14px 120px}
+  .sectionTitle{margin:12px 0;color:var(--muted);font-weight:600}
+  .result-card{background:var(--card);border-radius:12px;padding:12px;margin-bottom:12px;border:1px solid #eee;display:flex;gap:12px;align-items:flex-start}
+  .avatar{width:56px;height:56px;border-radius:50%;background:#d9e9ff;display:flex;align-items:center;justify-content:center;font-weight:700;color:#111}
+  .result-body{flex:1}
+  .result-body .title{font-weight:700;margin-bottom:6px}
+  .result-body .meta{color:var(--muted);font-size:13px;margin-bottom:8px}
+  .result-body .snippet{color:#222;font-size:14px}
+  .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#f2f2f5;border:1px solid #eee;font-weight:600;margin-left:8px}
+  .empty{padding:26px 14px;text-align:center;color:var(--muted)}
+  .load-more{display:block;margin:10px auto 30px;padding:8px 14px;border-radius:10px;border:1px solid #ddd;background:#fff;cursor:pointer}
+  footer.nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #eee;padding:10px 18px;display:flex;justify-content:space-around;align-items:center}
+  footer.nav button{background:transparent;border:0;cursor:pointer;font-size:18px}
+  /* small responsive */
+  @media(min-width:720px){ .search-wrap{max-width:720px;margin:0 auto} .results{max-width:720px;margin:0 auto} }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <button class="back" id="backBtn"><i class="fa-solid fa-arrow-left"></i></button>
+  <h2>Search</h2>
+  <div style="width:36px"></div>
+</div>
+
+<div class="search-wrap">
+  <div class="search-box" role="search">
+    <i class="fa-solid fa-magnifying-glass" style="color:var(--muted)"></i>
+    <input id="searchInput" placeholder="Search people, posts, groups..." aria-label="Search" />
+    <button id="clearSearch" title="Clear"><i class="fa-solid fa-xmark" style="color:var(--muted)"></i></button>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="all">All</div>
+    <div class="tab" data-tab="people">People</div>
+    <div class="tab" data-tab="posts">Posts</div>
+    <div class="tab" data-tab="groups">Groups</div>
+    <div class="tab" data-tab="pages">Pages</div>
+  </div>
+
+  <div class="controls">
+    <button id="filterBtn"><i class="fa-solid fa-filter"></i> Filter</button>
+    <button id="clearBtn"><i class="fa-regular fa-trash-can"></i> Clear</button>
+  </div>
+</div>
+
+<div class="results" id="results">
+  <div class="sectionTitle" id="sectionTitle">Popular</div>
+
+  <!-- demo results will be inserted here -->
+</div>
+
+<footer class="nav" aria-hidden="false">
+  <button id="homeBtn" title="Home"><i class="fa-solid fa-house"></i></button>
+  <button id="exploreBtn" title="Explore"><i class="fa-solid fa-compass"></i></button>
+  <button id="plusBtn" title="Create"><i class="fa-solid fa-plus"></i></button>
+  <button id="messagesBtn" title="Messages"><i class="fa-regular fa-envelope"></i></button>
+  <button id="profileBtn" title="Profile"><i class="fa-regular fa-user"></i></button>
+</footer>
+
+<script>
+/* ========= Demo data (keeps your existing arrays) ========= */
+const PEOPLE = [
+  {id:'u1',name:'maria',tag:'@maria',bio:'Photographer • Coffee lover',city:'Manila'},
+  {id:'u2',name:'alex',tag:'@alex',bio:'Gamer • Creator',city:'Cebu'},
+  {id:'u3',name:'sam',tag:'@sam',bio:'Streamer • Magic tricks',city:'Manila'},
+  {id:'u4',name:'jordan',tag:'@jordan',bio:'Foodie • Travel',city:'Davao'},
+  {id:'u5',name:'amy',tag:'@amy',bio:'Designer • Cat person',city:'Cebu'}
+];
+
+const POSTS = [
+  {id:'p401',author:'maria',text:'Check out this cute puppy I met today!',likes:12,comments:3,city:'Manila'},
+  {id:'p402',author:'alex',text:'Ranked up to diamond — nuts match!',likes:120,comments:34,city:'Cebu'},
+  {id:'p403',author:'sam',text:'Live in 10 minutes, join the stream!',likes:8,comments:2,city:'Manila'},
+  {id:'p404',author:'jordan',text:'Tried the street tacos yesterday. 10/10',likes:23,comments:5,city:'Davao'},
+  {id:'p405',author:'amy',text:'New poster design drop — feedback welcome',likes:31,comments:8,city:'Cebu'}
+];
+
+const GROUPS = [
+  {id:'g1',name:'Introvert Memes',desc:'Daily wholesome memes',city:'Global'},
+  {id:'g2',name:'Mobile Gamers',desc:'Mobile game chat & tips',city:'Global'},
+  {id:'g3',name:'Photography',desc:'Share your shots',city:'Global'}
+];
+
+/* ========= Helpers ========= */
+const el = (sel, root=document) => root.querySelector(sel);
+const create = (tag, attrs={}, html='') => {
+  const n = document.createElement(tag);
+  Object.entries(attrs).forEach(([k,v]) => n.setAttribute(k,v));
+  if(html) n.innerHTML = html;
+  return n;
+};
+function escapeHtml(s){ return (s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+/* ========= State ========= */
+const resultsEl = el('#results');
+const sectionTitle = el('#sectionTitle');
+let activeTab = 'all';
+let page = 0;
+const PAGE_SIZE = 5;
+
+/* filters object (applied on top of search text & tab) */
+window.__filters = {
+  city: '',            // "" => any
+  types: { people:true, posts:true, groups:true }, // which item types to include
+  minLikes: 0          // posts only: min likes
+};
+
+/* ========= Rendering (respects window.__filters) ========= */
+function collectItems(filterText){
+  const items = [];
+  const f = filterText || '';
+  const cityFilter = (window.__filters.city || '').trim().toLowerCase();
+
+  // PEOPLE
+  if(activeTab==='all' || activeTab==='people'){
+    PEOPLE.forEach(p=>{
+      if(!window.__filters.types.people) return;
+      if(f && !(p.name.toLowerCase().includes(f) || p.tag.toLowerCase().includes(f) || p.bio.toLowerCase().includes(f))) return;
+      if(cityFilter && (!(p.city||'').toLowerCase().includes(cityFilter))) return;
+      items.push({type:'person',data:p});
+    });
+  }
+
+  // POSTS
+  if(activeTab==='all' || activeTab==='posts'){
+    POSTS.forEach(p=>{
+      if(!window.__filters.types.posts) return;
+      if(window.__filters.minLikes && (p.likes||0) < window.__filters.minLikes) return;
+      if(f && !(p.text.toLowerCase().includes(f) || p.author.toLowerCase().includes(f))) return;
+      if(cityFilter && (!(p.city||'').toLowerCase().includes(cityFilter))) return;
+      items.push({type:'post',data:p});
+    });
+  }
+
+  // GROUPS
+  if(activeTab==='all' || activeTab==='groups'){
+    GROUPS.forEach(g=>{
+      if(!window.__filters.types.groups) return;
+      if(f && !(g.name.toLowerCase().includes(f) || g.desc.toLowerCase().includes(f))) return;
+      if(cityFilter && (!(g.city||'').toLowerCase().includes(cityFilter))) return;
+      items.push({type:'group',data:g});
+    });
+  }
+
+  return items;
+}
+
+function renderList(reset=false){
+  if(reset){ resultsEl.querySelectorAll('.result-card, .load-more, .empty').forEach(n=>n.remove()); page = 0; }
+  const filter = el('#searchInput').value.trim().toLowerCase();
+  const items = collectItems(filter);
+
+  const start = page * PAGE_SIZE;
+  const pageItems = items.slice(start, start + PAGE_SIZE);
+
+  if(pageItems.length===0 && start===0){
+    const empty = create('div',{},'<div class="empty">No results. Try another search or adjust filters.</div>');
+    resultsEl.appendChild(empty);
+    return;
+  }
+
+  pageItems.forEach(item=>{
+    const card = create('div',{class:'result-card'});
+    const avatar = create('div',{class:'avatar'}, '');
+    const body = create('div',{class:'result-body'});
+
+    if(item.type==='person'){
+      avatar.textContent = item.data.name.slice(0,2).toUpperCase();
+      body.innerHTML = `<div class="title">${escapeHtml(item.data.name)} <span class="pill">${escapeHtml(item.data.tag)}</span></div>
+                        <div class="meta">${escapeHtml(item.data.bio)} · ${escapeHtml(item.data.city || '—')}</div>
+                        <div class="snippet">View profile, follow or message ${escapeHtml(item.data.name)}.</div>`;
+      card.onclick = ()=> openProfile(item.data.id);
+    } else if(item.type==='post'){
+      avatar.innerHTML = '<i class="fa-regular fa-square" style="font-size:18px;color:var(--muted)"></i>';
+      body.innerHTML = `<div class="title">${escapeHtml(item.data.author)} • <small class="meta">${item.data.likes} likes</small></div>
+                        <div class="meta">${escapeHtml(item.data.text)}</div>
+                        <div class="snippet">Open post to read comments and react. · ${escapeHtml(item.data.city || '—')}</div>`;
+      card.onclick = ()=> openPost(item.data.id);
+    } else if(item.type==='group'){
+      avatar.innerHTML = '<i class="fa-solid fa-users" style="font-size:18px;color:var(--muted)"></i>';
+      body.innerHTML = `<div class="title">${escapeHtml(item.data.name)}</div>
+                        <div class="meta">${escapeHtml(item.data.desc)} · ${escapeHtml(item.data.city || '—')}</div>
+                        <div class="snippet">Join group to see posts and chat with members.</div>`;
+      card.onclick = ()=> openGroup(item.data.id);
+    }
+
+    card.appendChild(avatar);
+    card.appendChild(body);
+    resultsEl.appendChild(card);
+  });
+
+  // load more if more items
+  const totalLeft = Math.max(0, items.length - (page+1)*PAGE_SIZE);
+  if(totalLeft>0){
+    const load = create('button',{class:'load-more'}, 'Load more');
+    load.onclick = ()=> { page++; renderList(); load.remove(); };
+    resultsEl.appendChild(load);
+  }
+}
+
+/* ========= Open helpers ========= */
+function openProfile(id){ try{ window.location.href = 'profile.html?user=' + encodeURIComponent(id); }catch(e){ alert('Open profile: profile.html?user=' + id); } }
+function openPost(id){ try{ window.location.href = 'post.html?id=' + encodeURIComponent(id); }catch(e){ alert('Open: post.html?id=' + id + '\n(File not found in project).'); } }
+function openGroup(id){ try{ window.location.href = 'group.html?id=' + encodeURIComponent(id); }catch(e){ alert('Open group: group.html?id=' + id); } }
+
+/* ========= Filter popup code ========= */
+function makeFilterPopup(){
+  // if already open, return
+  if(document.getElementById('__filterPopup')) return;
+
+  const wrapper = create('div',{id:'__filterPopup', style:'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:99999;padding:18px;'});
+  const box = create('div',{class:'modal-box', style:'width:100%;max-width:520px;background:#fff;border-radius:12px;padding:12px;'});
+  box.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <strong>Filters</strong>
+      <button id="__filterClose" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button>
+    </div>
+
+    <div style="margin-top:8px;">
+      <label style="display:block;font-weight:600;margin-bottom:6px">City</label>
+      <input id="__filterCity" placeholder="e.g. Manila" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #eee">
+    </div>
+
+    <div style="margin-top:12px;">
+      <label style="display:block;font-weight:600;margin-bottom:6px">Types</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="__f_people"> People</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="__f_posts"> Posts</label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="__f_groups"> Groups</label>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;">
+      <label style="display:block;font-weight:600;margin-bottom:6px">Minimum likes (posts)</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input id="__f_minLikes" type="range" min="0" max="200" value="${window.__filters.minLikes || 0}" style="flex:1">
+        <div id="__f_minLikesVal" style="min-width:46px;text-align:right">${window.__filters.minLikes||0}</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+      <button id="__filterReset" style="padding:8px 12px;border-radius:10px;border:1px solid #ddd;background:#fff;cursor:pointer">Reset</button>
+      <button id="__filterApply" style="padding:8px 14px;border-radius:10px;border:none;background:#111;color:#fff;cursor:pointer">Apply</button>
+    </div>
+  `;
+
+  wrapper.appendChild(box);
+  document.body.appendChild(wrapper);
+
+  // populate fields from current filters
+  el('#__filterCity').value = window.__filters.city || '';
+  el('#__f_people').checked = !!window.__filters.types.people;
+  el('#__f_posts').checked = !!window.__filters.types.posts;
+  el('#__f_groups').checked = !!window.__filters.types.groups;
+  el('#__f_minLikes').value = window.__filters.minLikes || 0;
+  el('#__f_minLikesVal').textContent = window.__filters.minLikes || 0;
+
+  // events
+  el('#__filterClose').onclick = removeFilterPopup;
+  el('#__filterReset').onclick = ()=> {
+    window.__filters.city = '';
+    window.__filters.types = {people:true,posts:true,groups:true};
+    window.__filters.minLikes = 0;
+    // update UI
+    el('#__filterCity').value = '';
+    el('#__f_people').checked = true;
+    el('#__f_posts').checked = true;
+    el('#__f_groups').checked = true;
+    el('#__f_minLikes').value = 0;
+    el('#__f_minLikesVal').textContent = '0';
+    // re-render
+    resultsEl.querySelectorAll('.result-card, .load-more, .empty').forEach(n=>n.remove());
+    page = 0;
+    renderList(true);
+  };
+
+  el('#__f_minLikes').addEventListener('input', (e)=> el('#__f_minLikesVal').textContent = e.target.value);
+
+  el('#__filterApply').onclick = ()=> {
+    window.__filters.city = el('#__filterCity').value.trim();
+    window.__filters.types.people = !!el('#__f_people').checked;
+    window.__filters.types.posts = !!el('#__f_posts').checked;
+    window.__filters.types.groups = !!el('#__f_groups').checked;
+    window.__filters.minLikes = parseInt(el('#__f_minLikes').value,10) || 0;
+
+    // close popup then render
+    removeFilterPopup();
+    resultsEl.querySelectorAll('.result-card, .load-more, .empty').forEach(n=>n.remove());
+    page = 0;
+    renderList(true);
+  };
+
+  // clicking outside the box closes
+  wrapper.addEventListener('click', (ev)=> { if(ev.target === wrapper) removeFilterPopup(); });
+
+  // focus first input
+  setTimeout(()=>el('#__filterCity').focus(), 50);
+}
+
+function removeFilterPopup(){
+  const p = document.getElementById('__filterPopup');
+  if(p && p.parentNode) p.parentNode.removeChild(p);
+}
+
+/* ========= Wire filter button to popup ========= */
+el('#filterBtn').addEventListener('click', (e)=> {
+  e.preventDefault();
+  makeFilterPopup();
+});
+
+/* ========= Existing event wiring (search, tabs, nav, etc) ========= */
+el('#searchInput').addEventListener('input', ()=> {
+  clearTimeout(window.__searchDeb);
+  window.__searchDeb = setTimeout(()=> {
+    resultsEl.querySelectorAll('.result-card, .load-more, .empty').forEach(n=>n.remove());
+    page = 0;
+    renderList(true);
+  }, 240);
+});
+el('#clearSearch').addEventListener('click', ()=> {
+  el('#searchInput').value = '';
+  resultsEl.querySelectorAll('.result-card, .load-more, .empty').forEach(n=>n.remove());
+  page = 0; renderList(true);
+});
+
+document.getElementById('tabs').addEventListener('click', (e)=>{
+  const t = e.target.closest('.tab');
+  if(!t) return;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  activeTab = t.dataset.tab;
+  sectionTitle.textContent = activeTab === 'all' ? 'Popular' : (activeTab.charAt(0).toUpperCase() + activeTab.slice(1));
+  resultsEl.querySelectorAll('.result-card, .load-more, .empty').forEach(n=>n.remove());
+  page = 0;
+  renderList(true);
+});
+
+el('#clearBtn').onclick = ()=> { el('#searchInput').value = ''; resultsEl.querySelectorAll('.result-card, .load-more, .empty').forEach(n=>n.remove()); page = 0; renderList(true); };
+el('#backBtn').onclick = ()=> { try{ window.history.back(); }catch(e){} };
+el('#homeBtn').onclick = ()=> { window.location.href = 'home.html'; };
+el('#profileBtn').onclick = ()=> { window.location.href = 'profile.html'; };
+el('#exploreBtn').onclick = ()=> { window.location.href = 'home.html'; };
+el('#messagesBtn').onclick = ()=> { window.location.href = 'messages.html'; };
+el('#plusBtn').onclick = ()=> { alert('Create: open composer (demo)'); };
+
+/* infinite scroll auto-load */
+window.addEventListener('scroll', () => {
+  if((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 160)) {
+    const load = document.querySelector('.load-more');
+    if(load) load.click();
+  }
+});
+
+/* initial render */
+renderList(true);
+</script>
+</script>
+</body>
+</html>
+```0

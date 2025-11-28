@@ -1,0 +1,436 @@
+<!-- Paste this entire file (replace your current cart/store file). 
+     Single self-contained HTML implementing:
+     - VIP bundles (swipeable row)
+     - Shop grid with 100+ unique demo items (no duplicates)
+     - Cart modal with working + / - and Remove
+     - Blocks direct "diamond" purchases (alert)
+     - Demo admin controls (toggle admin mode to change price)
+     - Currency INR (demo)
+     - Uses emojis for item images; easy to swap for real images
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Flick Store</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  :root{--bg:#f3f3f7;--card:#fff;--muted:#777;--accent:#111;--pill:#000;}
+  *{box-sizing:border-box;font-family:Inter, system-ui, Arial, sans-serif}
+  body{margin:0;background:var(--bg);color:#111}
+  .topbar{height:64px;display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #eee;background:#fff;position:sticky;top:0;z-index:30}
+  .topbar .back{width:44px;height:44px;border-radius:10px;background:#fff;border:1px solid #eee;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .topbar h1{flex:1;text-align:center;margin:0;font-size:18px}
+  .container{padding:18px;max-width:980px;margin:0 auto}
+  .vip-row{display:flex;gap:12px;overflow:auto;padding-bottom:8px;margin-bottom:12px}
+  .vip-card{min-width:210px;background:var(--card);border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(0,0,0,0.04);display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+  .vip-card .emoji{font-size:30px}
+  .vip-card .name{font-weight:700}
+  .vip-card .price{color:var(--muted);margin-top:4px}
+  .vip-card button{margin-top:8px;background:var(--pill);color:#fff;padding:8px 12px;border-radius:12px;border:none;cursor:pointer}
+
+  .section-head{display:flex;align-items:center;justify-content:space-between;margin:18px 0 8px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .item{background:var(--card);padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.035);display:flex;flex-direction:column;align-items:center;gap:8px}
+  .item .img{width:72px;height:72px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:32px;border:1px solid #f0f0f0}
+  .item .title{font-weight:700;text-align:center}
+  .item .price{color:var(--muted);margin-top:4px}
+  .item button{margin-top:8px;background:var(--pill);color:#fff;padding:8px 10px;border-radius:10px;border:none;cursor:pointer}
+
+  /* bottom cart bar */
+  .cart-bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #eee;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;z-index:50}
+  .cart-summary{font-weight:700}
+  .view-cart{background:var(--pill);color:#fff;padding:10px 14px;border-radius:12px;border:none;cursor:pointer}
+
+  /* Cart modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:flex-end;justify-content:center;padding:12px;z-index:60}
+  .modal-box{width:100%;max-width:960px;background:#fff;border-radius:12px;padding:14px;max-height:78vh;overflow:auto}
+  .cart-row{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #f2f2f2}
+  .qty-btn{width:36px;height:36px;border-radius:10px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:18px}
+  .remove-btn{background:transparent;border:none;color:#d00;cursor:pointer}
+
+  /* admin toolbar small */
+  .admin-bar{position:fixed;left:12px;bottom:86px;background:#000;color:#fff;padding:8px 10px;border-radius:10px;z-index:70;font-size:13px}
+  .admin-bar input{width:60px;margin-left:8px;padding:4px;border-radius:6px;border:1px solid #ddd}
+
+  /* responsive */
+  @media (min-width:720px){
+    .grid{grid-template-columns:repeat(4,1fr)}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="back" onclick="history.back()"><i class="fa-solid fa-arrow-left"></i></div>
+  <h1>Flick Store</h1>
+  <div style="width:44px"></div>
+</div>
+
+<div class="container">
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <h2 style="margin:0">VIP Bundles</h2>
+    <div style="color:var(--muted)">Currency: ₹ (demo)</div>
+  </div>
+
+  <div id="vipBundles" class="vip-row" aria-hidden="false"></div>
+
+  <div class="section-head">
+    <h3 style="margin:0">Shop</h3>
+    <div style="display:flex;gap:8px">
+      <button id="filterBtn" style="padding:8px 12px;border-radius:10px;border:1px solid #ddd;background:#fff;cursor:pointer">Filter</button>
+      <button id="clearAllBtn" style="padding:8px 12px;border-radius:10px;border:1px solid #ddd;background:#fff;cursor:pointer">Clear all</button>
+    </div>
+  </div>
+
+  <div id="shopGrid" class="grid"></div>
+</div>
+
+<!-- bottom cart -->
+<div class="cart-bar" aria-hidden="false">
+  <div class="cart-summary">Cart: <span id="cartCount">0</span></div>
+  <div>
+    <button id="viewCartBtn" class="view-cart">View Cart</button>
+  </div>
+</div>
+
+<!-- Cart modal container (injected) -->
+<div id="cartModalRoot"></div>
+
+<!-- small admin toggle -->
+<div id="adminBar" class="admin-bar" style="display:none">
+  Admin:
+  <label style="margin-left:8px"><input id="adminToggle" type="checkbox"> ON</label>
+  <span style="margin-left:10px">Set demo price: ₹</span>
+  <input id="adminPrice" type="number" value="" placeholder="leave blank">
+</div>
+
+<script>
+/* =========================
+   STORE + CART logic (paste entire block)
+   - Generates 100 unique demo items (names/prices)
+   - VIP bundles at top (3 items)
+   - Cart with working + / - and Remove
+   - Blocks "diamond" purchases by name
+   - Admin mode to change item price (demo)
+   ========================= */
+
+/* app state */
+window.APP = window.APP || {};
+APP.CART = APP.CART || {}; // {id:{item,qty}}
+APP.USER = APP.USER || { xp:0, vip:0, diamonds:0 };
+
+/* small helpers */
+function $(s){ return document.querySelector(s); }
+function uuid(prefix='i'){ return prefix + '_' + Date.now() + '_' + Math.floor(Math.random()*9000); }
+function money(n){ return Number(n||0).toLocaleString(undefined); }
+
+/* DEMO: VIP bundles list (emoji used as image) */
+const VIP_BUNDLES = [
+  { id:'vip_100', name:'Buy 100 XP', price:99, xp:100, emoji:'✨' },
+  { id:'vip_250', name:'Buy 250 XP', price:199, xp:250, emoji:'💎' },
+  { id:'vip_600', name:'Buy 600 XP', price:499, xp:600, emoji:'👑' }
+];
+
+/* DEMO: generate 100 unique shop items (flowers, sweets, gifts) */
+const EMOJIS = ['🌹','🌸','🌺','🍰','🧁','🍫','🍬','🍭','🎁','🎈','🍪','🍩','🍮','🍧','🍨','🥟','🍣','🍱','🍜','🧧'];
+const SHOP_ITEMS = [];
+for(let i=1;i<=100;i++){
+  const emoji = EMOJIS[i % EMOJIS.length];
+  SHOP_ITEMS.push({
+    id: 'shop_'+i,
+    name: `${ (emoji==='🌹'?'Red Rose': emoji==='🍰'?'Sweet': 'Gifts') } ${i}`,
+    price: Math.floor(50 + (Math.random()*900)), // demo price 50..950
+    emoji,
+    isBundle:false
+  });
+}
+
+/* render vip bundles row */
+function renderVipBundles(){
+  const root = document.getElementById('vipBundles');
+  root.innerHTML = '';
+  VIP_BUNDLES.forEach(b=>{
+    const card = document.createElement('div'); card.className='vip-card';
+    card.innerHTML = `<div class="emoji">${b.emoji}</div>
+      <div class="name">${b.name}</div>
+      <div class="price">₹ ${money(b.price)}</div>
+      <button data-buy="${b.id}" data-price="${b.price}" data-xp="${b.xp}">Buy</button>`;
+    root.appendChild(card);
+  });
+
+  // click handler (delegated)
+  root.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      const id = btn.dataset.buy;
+      const price = Number(btn.dataset.price||0);
+      const xp = Number(btn.dataset.xp||0);
+      // Prevent "diamond" purchases (none of these are diamonds so ok)
+      addToCart({ id: uuid('bundle'), item:{ id, name: id.replace('_',' ').toUpperCase(), emoji:'🎁', price, isBundle:true }, qty:1 });
+      // grant demo xp on buy
+      APP.USER.xp = (APP.USER.xp||0) + xp;
+      alert(`Added to cart and awarded +${xp} XP (demo).`);
+      updateCartUI();
+    });
+  });
+}
+
+/* render shop grid */
+function renderShop(){
+  const g = document.getElementById('shopGrid');
+  g.innerHTML = '';
+  SHOP_ITEMS.forEach(it=>{
+    const card = document.createElement('div'); card.className='item';
+    card.innerHTML = `<div class="img">${it.emoji}</div>
+      <div class="title">${it.name}</div>
+      <div class="price">₹ ${money(it.price)}</div>
+      <button data-id="${it.id}" data-price="${it.price}" data-name="${it.name}">Add to Cart</button>`;
+    g.appendChild(card);
+  });
+
+  // add handlers
+  g.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', (e)=>{
+      const name = b.dataset.name;
+      const price = Number(b.dataset.price||0);
+      // block diamonds by name (if future items include diamond)
+      if(/diamond/i.test(name)){
+        alert('Diamonds cannot be purchased directly. They are acquired when you receive gifts.');
+        return;
+      }
+      addToCart({ id: uuid('p'), item:{ id: b.dataset.id, name, price, emoji:'🛍️', isBundle:false }, qty:1 });
+      toast('Added to cart');
+      updateCartUI();
+    });
+  });
+}
+
+/* cart helpers */
+function addToCart(entry){
+  if(!entry || !entry.item) return;
+  const id = entry.id;
+  if(!APP.CART[id]) APP.CART[id] = { item: entry.item, qty: 0 };
+  APP.CART[id].qty += entry.qty || 1;
+  renderCartIfOpen();
+}
+function changeQty(id, delta){
+  if(!APP.CART[id]) return;
+  APP.CART[id].qty = Math.max(0, APP.CART[id].qty + delta);
+  if(APP.CART[id].qty === 0) delete APP.CART[id];
+  renderCartIfOpen();
+  updateCartUI();
+}
+function removeCart(id){
+  delete APP.CART[id];
+  renderCartIfOpen();
+  updateCartUI();
+}
+function cartCount(){ return Object.values(APP.CART).reduce((s,e)=> s + (e.qty||0), 0); }
+function cartTotal(){ return Object.values(APP.CART).reduce((s,e)=> s + (Number(e.item.price||0) * (e.qty||0)), 0); }
+
+/* Update summary UI on page */
+function updateCartUI(){
+  const countEl = document.getElementById('cartCount');
+  if(countEl) countEl.textContent = cartCount();
+}
+
+/* Toast */
+function toast(msg, t=1200){
+  const el = document.createElement('div');
+  el.textContent = msg;
+  Object.assign(el.style,{position:'fixed',left:'50%',bottom:'90px',transform:'translateX(-50%)',background:'#111',color:'#fff',padding:'8px 12px',borderRadius:'8px',zIndex:9999});
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),t);
+}
+
+/* Cart modal rendering */
+let cartModalOpen = false;
+function openCartModal(){
+  if(cartModalOpen) return;
+  cartModalOpen = true;
+  const root = document.getElementById('cartModalRoot');
+  root.innerHTML = `
+    <div class="modal" id="cartModal">
+      <div class="modal-box" role="dialog" aria-modal="true">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>Cart</strong>
+          <button id="closeCart" style="background:transparent;border:none;font-size:20px;cursor:pointer">✕</button>
+        </div>
+        <div id="cartList" style="margin-top:8px"></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('closeCart').addEventListener('click', ()=> closeCartModal());
+  document.getElementById('cartModal').addEventListener('click', (e)=>{ if(e.target.id==='cartModal') closeCartModal(); });
+  renderCartIfOpen();
+}
+function closeCartModal(){
+  cartModalOpen = false;
+  const root = document.getElementById('cartModalRoot'); root.innerHTML = '';
+}
+
+/* render cart rows (if modal exists) */
+function renderCartIfOpen(){
+  const list = document.getElementById('cartList');
+  if(!list) return;
+  list.innerHTML = '';
+
+  const keys = Object.keys(APP.CART);
+  if(keys.length === 0){
+    list.innerHTML = '<div style="padding:18px;color:#666">Your cart is empty.</div>';
+    updateCartUI();
+    return;
+  }
+
+  keys.forEach(k=>{
+    const e = APP.CART[k];
+    const row = document.createElement('div'); row.className='cart-row';
+    row.innerHTML = `
+      <div style="width:56px;height:56px;border-radius:10px;background:#fff;border:1px solid #f2f2f2;display:flex;align-items:center;justify-content:center">${e.item.emoji||'🎁'}</div>
+      <div style="flex:1">
+        <div style="font-weight:700">${e.item.name}</div>
+        <div style="color:${'#777'};margin-top:6px">₹ ${money(e.item.price)} each</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="qty-btn" data-id="${k}" data-op="-1">−</button>
+          <div style="min-width:36px;text-align:center;padding:6px 8px;border-radius:8px;background:#f6f6f6">${e.qty}</div>
+          <button class="qty-btn" data-id="${k}" data-op="1">+</button>
+        </div>
+        <div style="font-weight:700">₹ ${money(e.qty * e.item.price)}</div>
+        <div><button class="remove-btn" data-id="${k}">Remove</button></div>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  // footer
+  const footer = document.createElement('div');
+  footer.style.padding = '12px';
+  footer.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="color:#777;font-size:13px">Total</div>
+        <div style="font-weight:700">₹ ${money(cartTotal())}</div>
+      </div>
+      <div>
+        <button id="checkoutBtn" style="background:#0a8f4c;color:#fff;padding:10px 16px;border-radius:12px;border:none;cursor:pointer">Checkout</button>
+      </div>
+    </div>`;
+  list.parentNode.appendChild(footer);
+
+  // attach events
+  list.querySelectorAll('.qty-btn').forEach(b=>{
+    b.onclick = ()=> { const id=b.dataset.id, op=Number(b.dataset.op||0); changeQty(id, op); updateCartUI(); };
+  });
+  list.querySelectorAll('.remove-btn').forEach(b=>{
+    b.onclick = ()=> { const id=b.dataset.id; if(confirm('Remove item?')) removeCart(id); updateCartUI(); };
+  });
+  document.getElementById('checkoutBtn') && (document.getElementById('checkoutBtn').onclick = ()=>{
+    alert('Demo checkout: total ₹' + cartTotal());
+    // clear cart
+    Object.keys(APP.CART).forEach(k=>delete APP.CART[k]);
+    renderCartIfOpen(); updateCartUI(); closeCartModal();
+  });
+
+  updateCartUI();
+}
+
+/* Filters & Clear all */
+$('#clearAllBtn').addEventListener('click', ()=> {
+  if(!confirm('Clear all items in cart?')) return;
+  Object.keys(APP.CART).forEach(k=>delete APP.CART[k]);
+  renderCartIfOpen(); updateCartUI();
+});
+$('#filterBtn').addEventListener('click', ()=>{
+  const f = prompt('Filter demo: enter emoji (e.g. 🌹) or text (e.g. Rose) to show only matching items. Leave blank to reset.');
+  if(f === null) return;
+  if(f.trim() === ''){
+    renderShop();
+    return;
+  }
+  const matches = SHOP_ITEMS.filter(it=> it.name.toLowerCase().includes(f.toLowerCase()) || (it.emoji||'').includes(f));
+  const g = document.getElementById('shopGrid'); g.innerHTML='';
+  matches.forEach(it=>{
+    const card = document.createElement('div'); card.className='item';
+    card.innerHTML = `<div class="img">${it.emoji}</div><div class="title">${it.name}</div><div class="price">₹ ${money(it.price)}</div><button data-id="${it.id}" data-price="${it.price}" data-name="${it.name}">Add to Cart</button>`;
+    g.appendChild(card);
+  });
+  g.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const name=b.dataset.name; const price=Number(b.dataset.price||0);
+      if(/diamond/i.test(name)){ alert('Cannot purchase diamonds directly.'); return; }
+      addToCart({ id: uuid('p'), item:{ id:b.dataset.id, name, price, emoji:'🛍️' }, qty:1 });
+      toast('Added to cart');
+      updateCartUI();
+    });
+  });
+});
+
+/* View cart button */
+$('#viewCartBtn').addEventListener('click', openCartModal);
+
+/* init rendering */
+renderVipBundles();
+renderShop();
+updateCartUI();
+
+/* admin features: toggle display and demo price update */
+(function initAdmin(){
+  // create admin toggle via right-click on header area (demo trigger)
+  let adminShown = false;
+  document.querySelector('.topbar').addEventListener('dblclick', ()=>{
+    adminShown = !adminShown;
+    document.getElementById('adminBar').style.display = adminShown ? 'block' : 'none';
+  });
+  // admin inputs
+  document.getElementById('adminToggle').addEventListener('change', (e)=>{
+    document.getElementById('adminBar').style.background = e.target.checked ? '#880' : '#000';
+  });
+  // set price demo: when set and admin toggle ON, change all VIP bundle prices (demo)
+  document.getElementById('adminPrice').addEventListener('change', (e)=>{
+    const v = Number(e.target.value||0);
+    if(!v) return;
+    if(!document.getElementById('adminToggle').checked){ alert('Turn ON admin first (toggle).'); return; }
+    // apply to VIP bundles as demo
+    VIP_BUNDLES.forEach((b, idx)=> b.price = Math.max(1, v + (idx*10)) );
+    renderVipBundles();
+    alert('Demo VIP bundle prices updated (admin).');
+  });
+})();
+
+/* quick UX: scroll vip row with swipe hint */
+document.getElementById('vipBundles').addEventListener('wheel', (ev)=>{ ev.preventDefault(); document.getElementById('vipBundles').scrollLeft += ev.deltaY; });
+
+/* helpful: persist cart to sessionStorage (demo) */
+window.addEventListener('beforeunload', ()=>{
+  try{ sessionStorage.setItem('APP_CART', JSON.stringify(APP.CART)); sessionStorage.setItem('APP_USER', JSON.stringify(APP.USER)); }catch(e){}
+});
+(function restore(){
+  try{
+    const c = JSON.parse(sessionStorage.getItem('APP_CART')||'{}');
+    const u = JSON.parse(sessionStorage.getItem('APP_USER')||'{}');
+    if(c && Object.keys(c).length) APP.CART = c;
+    if(u && Object.keys(u).length) APP.USER = u;
+    updateCartUI();
+  }catch(e){}
+})();
+
+/* small protective guard so +/- works even if UI re-rendered
+   (delegate keyboard / other issues)
+*/
+document.body.addEventListener('click', (e)=>{
+  const t = e.target;
+  if(t.matches && t.matches('.qty-btn')){
+    const id = t.dataset.id, op = Number(t.dataset.op||0);
+    if(id) changeQty(id, op);
+  }
+  if(t.matches && t.matches('.remove-btn')){
+    const id = t.dataset.id;
+    if(id && confirm('Remove this item?')) removeCart(id);
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Notifications — Flick</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  :root{
+    --bg: #ffffff;
+    --muted: #7a7a80;
+    --accent: #111;
+    --read-bg: #fafafa;
+    --unread-bg: #fff6ef;
+    --divider: #eee;
+  }
+  *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;}
+  html,body{height:100%;margin:0;background:var(--bg);color:#111;-webkit-font-smoothing:antialiased}
+  .topbar{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--divider);display:flex;align-items:center;gap:12px;padding:12px 14px;z-index:20}
+  .topbar button{background:transparent;border:0;padding:8px;border-radius:8px;font-size:18px;cursor:pointer}
+  .title{flex:1;text-align:center;font-weight:800;font-size:17px}
+  .container{max-width:920px;margin:0 auto;padding:10px 12px 90px;height:calc(100vh - 64px);display:flex;flex-direction:column}
+  .controls{display:flex;gap:10px;justify-content:flex-end;margin-bottom:10px;flex:0 0 auto}
+  .btn{padding:8px 12px;border-radius:10px;border:1px solid var(--divider);background:#fff;cursor:pointer;font-weight:600}
+  .btn.ghost{background:transparent}
+  .btn.primary{background:var(--accent);color:#fff;border:0}
+  .scroll-area{flex:1 1 auto;overflow:auto;padding-right:6px}
+  .list{display:flex;flex-direction:column;gap:8px;padding-bottom:12px}
+  .item{
+    display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:12px;background:var(--read-bg);
+    box-shadow:0 6px 14px rgba(12,12,12,0.03);border:1px solid #f6f6f6;
+    touch-action: pan-y;
+    position:relative;overflow:hidden;transition:transform .18s ease;
+  }
+  .item.unread{background:var(--unread-bg)}
+  .item .avatar{width:52px;height:52px;border-radius:50%;flex:0 0 52px;background:#dfeafe;display:flex;align-items:center;justify-content:center;font-weight:700;color:#123;overflow:hidden}
+  .item .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+  .item .body{flex:1;min-width:0}
+  .item .line{display:flex;align-items:center;gap:8px}
+  .item .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .msg{color:var(--muted);font-size:14px;margin-top:6px;line-height:1.3}
+  .time{font-size:12px;color:var(--muted);flex:0 0 auto;margin-left:8px}
+  .badge{background:#ff4d4d;color:#fff;padding:4px 8px;border-radius:999px;font-size:12px;margin-left:8px}
+  .swipe-delete{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:#ff5b5b;color:#fff;padding:8px 10px;border-radius:10px;border:0;display:none;z-index:8;cursor:pointer}
+  .item.show-delete .swipe-delete{display:block}
+  .empty{padding:28px;border-radius:12px;background:#fff;text-align:center;color:var(--muted);border:1px dashed var(--divider)}
+  .menu{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9999;background:#fff;border-radius:12px;padding:12px;border:1px solid var(--divider);box-shadow:0 12px 30px rgba(0,0,0,0.12);min-width:220px}
+  .menu button{display:block;width:100%;text-align:left;padding:10px;border-radius:8px;border:0;background:transparent;cursor:pointer}
+  @media (max-width:420px){
+    .container{padding:8px 10px 90px}
+    .item .avatar{width:44px;height:44px}
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <button id="backBtn" aria-label="back">←</button>
+    <div class="title">Notifications</div>
+    <button id="markAllReadBtn" class="btn ghost" title="Mark all read">Mark all</button>
+  </div>
+
+  <main class="container" id="main">
+    <div class="controls" id="controls">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="filterBtn" class="btn">Filter</button>
+        <button id="clearBtn" class="btn">Clear all</button>
+      </div>
+    </div>
+
+    <div class="scroll-area" id="scrollArea">
+      <div class="list" id="list"></div>
+      <div id="empty" class="empty" style="display:none">No notifications yet</div>
+    </div>
+  </main>
+
+<script>
+/* Full notifications page with lots of demo items and scrolling enabled.
+   Paste this whole file as notifications.html
+*/
+
+/* ---------- Utilities ---------- */
+function qs(sel, ctx=document){ return ctx.querySelector(sel); }
+function qsa(sel, ctx=document){ return Array.from((ctx||document).querySelectorAll(sel)); }
+function escapeHtml(s){ return (s||'').toString().replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+function formatTime(ts){
+  const d = new Date(ts);
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff/60000);
+  if(mins < 1) return 'just now';
+  if(mins < 60) return mins + 'm';
+  const hrs = Math.floor(mins/60);
+  if(hrs < 24) return hrs + 'h';
+  const days = Math.floor(hrs/24);
+  if(days < 7) return days + 'd';
+  return d.toLocaleDateString();
+}
+function save(data){ localStorage.setItem('flick_notifications_v1', JSON.stringify(data)); }
+function load(){ try{ return JSON.parse(localStorage.getItem('flick_notifications_v1')||'null')||[] }catch(e){ return [] }}
+
+/* ---------- Types ---------- */
+const TYPES = {
+  follow: {icon:'fa-user-plus', label:'started following you'},
+  like:   {icon:'fa-heart', label:'liked your post'},
+  comment:{icon:'fa-comment', label:'commented'},
+  mention:{icon:'fa-at', label:'mentioned you'},
+  gift:   {icon:'fa-gift', label:'sent you a gift'},
+  vip:    {icon:'fa-crown', label:'VIP upgrade'},
+  system: {icon:'fa-info-circle', label:'system'}
+};
+
+/* ---------- Demo seed (lots of notifications) ---------- */
+function seedDemo(){
+  const now = Date.now();
+  const demo = [
+    { id:'n001', type:'system', from:'Flick', avatar:'', text:'Welcome to Flick — here are tips to get started', ts: now - 1000*60*60*48, read:true,  target:null },
+    { id:'n002', type:'follow', from:'Maria', avatar:'https://i.pravatar.cc/80?img=12', text:'started following you', ts: now - 1000*60*3,  read:false, target:{type:'profile', id:'maria'} },
+    { id:'n003', type:'like', from:'Alex', avatar:'https://i.pravatar.cc/80?img=5', text:'liked your photo', ts: now - 1000*60*15, read:false, target:{type:'post', id:'p123'} },
+    { id:'n004', type:'comment', from:'Julio', avatar:'https://i.pravatar.cc/80?img=32', text:'Amazing shot! ✨', ts: now - 1000*60*34, read:false, target:{type:'post', id:'p456'} },
+    { id:'n005', type:'gift', from:'Sam', avatar:'https://i.pravatar.cc/80?img=20', text:'sent you a Rose (50 diamonds)', ts: now - 1000*60*90, read:true, target:{type:'profile', id:'sam'} },
+    { id:'n006', type:'vip', from:'System', avatar:'', text:'You reached VIP 1 — congrats!', ts: now - 1000*60*60*24, read:true, target:null },
+    { id:'n007', type:'mention', from:'Leo', avatar:'https://i.pravatar.cc/80?img=15', text:'@you check this out', ts: now - 1000*60*7,  read:false, target:{type:'post', id:'p789'} },
+    { id:'n008', type:'like', from:'Nina', avatar:'https://i.pravatar.cc/80?img=8', text:'liked your reel', ts: now - 1000*60*2, read:false, target:{type:'post', id:'r321'} },
+    { id:'n009', type:'comment', from:'Ravi', avatar:'https://i.pravatar.cc/80?img=10', text:'Where did you take this?', ts: now - 1000*60*60*5, read:false, target:{type:'post', id:'p222'} },
+    { id:'n010', type:'follow', from:'Aisha', avatar:'https://i.pravatar.cc/80?img=3', text:'started following you', ts: now - 1000*60*60*12, read:false, target:{type:'profile', id:'aisha'} },
+    { id:'n011', type:'gift', from:'Karan', avatar:'https://i.pravatar.cc/80?img=11', text:'Sent you a Diamond — 200 daimonds', ts: now - 1000*60*60*30, read:true, target:{type:'profile', id:'karan'} },
+    { id:'n012', type:'mention', from:'Zoe', avatar:'https://i.pravatar.cc/80?img=28', text:'@you check my new reel', ts: now - 1000*60*20, read:false, target:{type:'post', id:'r555'} },
+    { id:'n013', type:'like', from:'Mohan', avatar:'https://i.pravatar.cc/80?img=7', text:'loved your post', ts: now - 1000*60*360, read:true, target:{type:'post', id:'p999'} },
+    { id:'n014', type:'comment', from:'Priya', avatar:'https://i.pravatar.cc/80?img=2', text:'So cute! ❤️', ts: now - 1000*60*26, read:false, target:{type:'post', id:'p321'} },
+    { id:'n015', type:'system', from:'Flick', avatar:'', text:'Weekly digest: your top fans this week', ts: now - 1000*60*60*72, read:true, target:null },
+    // add more programmatically to fill the list
+  ];
+
+  // add 15 synthetic items to make list long
+  for(let i=16;i<=50;i++){
+    const t = (i%6===0)?'like':(i%5===0)?'comment':(i%4===0)?'follow':(i%3===0)?'mention':'gift';
+    const name = ['Lina','Omar','Yuki','Ben','Sara','Jace','Iris','Taj'][i%8];
+    demo.push({
+      id: 'n' + (100 + i),
+      type: t,
+      from: name,
+      avatar: `https://i.pravatar.cc/80?img=${(i%70)+1}`,
+      text: t==='comment' ? 'Nice!' : (t==='like' ? 'liked your post' : (t==='follow'?'started following you':'sent a small gift')),
+      ts: Date.now() - (i*1000*60* (i%60)),
+      read: (i%4===0),
+      target: (t==='like'||t==='comment'||t==='mention') ? {type:'post', id:'p'+(200+i)} : {type:'profile', id: name.toLowerCase()}
+    });
+  }
+
+  save(demo);
+  return demo;
+}
+
+/* ---------- Render list ---------- */
+const listEl = qs('#list');
+const emptyEl = qs('#empty');
+
+function renderList(){
+  const items = load().slice().sort((a,b)=> (a.ts - b.ts)).reverse(); // newest first
+  listEl.innerHTML = '';
+  if(items.length === 0){
+    emptyEl.style.display = 'block';
+    return;
+  } else emptyEl.style.display = 'none';
+
+  items.forEach(item=>{
+    const it = document.createElement('div');
+    it.className = 'item' + (item.read ? '' : ' unread');
+    it.dataset.id = item.id;
+
+    // avatar
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    if(item.avatar){
+      const img = document.createElement('img'); img.src = item.avatar; img.alt = item.from || 'U';
+      avatar.appendChild(img);
+    } else {
+      avatar.textContent = (item.from||'U').slice(0,2).toUpperCase();
+    }
+
+    // body
+    const body = document.createElement('div');
+    body.className = 'body';
+    const line = document.createElement('div');
+    line.className = 'line';
+    const title = document.createElement('div');
+    title.className = 'title';
+    const typeInfo = TYPES[item.type] || TYPES.system;
+    title.innerHTML = `<span style="margin-right:6px;font-weight:800">${escapeHtml(item.from||'System')}</span><span style="font-weight:600;color:#333">${escapeHtml(typeInfo.label)}</span>`;
+    const time = document.createElement('div');
+    time.className = 'time';
+    time.textContent = formatTime(item.ts);
+
+    line.appendChild(title);
+    line.appendChild(time);
+
+    const msg = document.createElement('div');
+    msg.className = 'msg';
+    msg.textContent = item.text || '';
+
+    body.appendChild(line);
+    body.appendChild(msg);
+
+    const del = document.createElement('button');
+    del.className = 'swipe-delete';
+    del.textContent = 'Delete';
+
+    it.appendChild(avatar);
+    it.appendChild(body);
+    it.appendChild(del);
+
+    attachItemEvents(it, item, del);
+
+    listEl.appendChild(it);
+  });
+
+  updateBadge();
+}
+
+/* ---------- Interactions: tap, swipe, long-press ---------- */
+let longPressTimer = null;
+function attachItemEvents(el, item, delBtn){
+  el.addEventListener('click', (e)=>{
+    if(el.classList.contains('show-delete')){ el.classList.remove('show-delete'); return; }
+    if(e.target === delBtn) return;
+    markRead(item.id);
+    if(item.target && item.target.type === 'post'){
+      const url = 'post.html?id=' + encodeURIComponent(item.target.id);
+      tryNavigate(url, item);
+    } else if(item.target && item.target.type === 'profile'){
+      const url = 'profile.html?u=' + encodeURIComponent(item.target.id);
+      tryNavigate(url, item);
+    } else {
+      showDetails(item);
+    }
+  });
+
+  delBtn.addEventListener('click', (ev)=>{
+    ev.stopPropagation();
+    deleteNotification(item.id);
+  });
+
+  // swipe logic (touch)
+  let startX = 0, currentX = 0, swiping = false;
+  el.addEventListener('touchstart', (ev)=>{
+    startX = ev.touches[0].clientX;
+    currentX = startX;
+    swiping = true;
+    longPressTimer = setTimeout(()=> { showItemMenu(item, el); }, 650);
+  }, {passive:true});
+
+  el.addEventListener('touchmove', (ev)=>{
+    if(!swiping) return;
+    currentX = ev.touches[0].clientX;
+    const dx = currentX - startX;
+    if(Math.abs(dx) > 8) clearTimeout(longPressTimer);
+    if(dx < -8){
+      const shift = Math.max(-120, dx);
+      el.style.transform = `translateX(${shift}px)`;
+      if(Math.abs(shift) > 60) el.classList.add('show-delete'); else el.classList.remove('show-delete');
+    }
+  }, {passive:true});
+
+  el.addEventListener('touchend', (ev)=>{
+    clearTimeout(longPressTimer);
+    swiping = false;
+    const dx = currentX - startX;
+    if(dx < -80){
+      el.classList.add('show-delete');
+      el.style.transform = '';
+    } else {
+      el.classList.remove('show-delete');
+      el.style.transform = '';
+    }
+  });
+
+  // desktop long-press / right-click fallback
+  el.addEventListener('contextmenu', (ev)=>{ ev.preventDefault(); showItemMenu(item, el); });
+  el.addEventListener('mousedown', (ev)=>{ longPressTimer = setTimeout(()=> showItemMenu(item, el), 700); });
+  el.addEventListener('mouseup', ()=> clearTimeout(longPressTimer));
+  el.addEventListener('mouseleave', ()=> clearTimeout(longPressTimer));
+}
+
+/* ---------- Actions ---------- */
+function markRead(id){
+  const items = load();
+  const idx = items.findIndex(i=>i.id===id);
+  if(idx === -1) return;
+  items[idx].read = true;
+  save(items);
+  renderList();
+}
+function toggleRead(id){
+  const items = load();
+  const idx = items.findIndex(i=>i.id===id);
+  if(idx === -1) return;
+  items[idx].read = !items[idx].read;
+  save(items);
+  renderList();
+}
+function deleteNotification(id){
+  let items = load();
+  items = items.filter(i=>i.id !== id);
+  save(items);
+  renderList();
+}
+function markAllRead(){
+  const items = load().map(i=> Object.assign(i,{read:true}));
+  save(items);
+  renderList();
+}
+function clearAll(){
+  if(!confirm('Clear all notifications?')) return;
+  save([]);
+  renderList();
+}
+
+/* ---------- Helpers: details, menu, navigation ---------- */
+function showDetails(item){
+  const m = document.createElement('div');
+  m.className = 'menu';
+  m.innerHTML = `
+    <div style="font-weight:800;margin-bottom:8px">Notification</div>
+    <div style="font-size:14px;color:#444;margin-bottom:12px">${escapeHtml(item.from||'System')} — ${escapeHtml(item.text||'')}</div>
+    <button id="mOpen">Open</button>
+    <button id="mToggle">${item.read? 'Mark unread' : 'Mark read'}</button>
+    <button id="mDelete" style="color:#c33">Delete</button>
+    <div style="height:8px"></div>
+    <button id="mClose">Close</button>
+  `;
+  document.body.appendChild(m);
+  qs('#mClose', m).addEventListener('click', ()=> m.remove());
+  qs('#mDelete', m).addEventListener('click', ()=> { deleteNotification(item.id); m.remove(); });
+  qs('#mToggle', m).addEventListener('click', ()=> { toggleRead(item.id); m.remove(); });
+  qs('#mOpen', m).addEventListener('click', ()=> { tryNavigateForItem(item); m.remove(); });
+}
+
+function showItemMenu(item, el){
+  const m = document.createElement('div');
+  m.className = 'menu';
+  m.innerHTML = `
+    <button id="openBtn">Open</button>
+    <button id="toggleBtn">${item.read? 'Mark unread' : 'Mark read'}</button>
+    <button id="deleteBtn" style="color:#c33">Delete</button>
+    <div style="height:6px"></div>
+    <button id="cancelBtn">Cancel</button>
+  `;
+  document.body.appendChild(m);
+  qs('#cancelBtn', m).addEventListener('click', ()=> m.remove());
+  qs('#deleteBtn', m).addEventListener('click', ()=> { deleteNotification(item.id); m.remove(); });
+  qs('#toggleBtn', m).addEventListener('click', ()=> { toggleRead(item.id); m.remove(); });
+  qs('#openBtn', m).addEventListener('click', ()=> { tryNavigateForItem(item); m.remove(); });
+}
+
+/* try navigation based on item target */
+function tryNavigateForItem(item){
+  if(item.target && item.target.type === 'post'){
+    const url = 'post.html?id=' + encodeURIComponent(item.target.id);
+    tryNavigate(url, item);
+  } else if(item.target && item.target.type === 'profile'){
+    const url = 'profile.html?u=' + encodeURIComponent(item.target.id);
+    tryNavigate(url,item);
+  } else {
+    alert((item.from||'System') + '\n\n' + (item.text||''));
+  }
+}
+
+function tryNavigate(url, item){
+  // attempt quick HEAD fetch to check file exists (may fail in local editors). Fall back to direct location.
+  fetch(url, {method:'HEAD'}).then(resp=>{
+    if(resp.ok) location.href = url;
+    else alert('Open: ' + url + '\n(File not found in project).');
+  }).catch(()=>{
+    try { location.href = url; } catch(e){ alert('Could not open: ' + url); }
+  });
+}
+
+/* ---------- Badge & controls ---------- */
+function updateBadge(){
+  const unread = load().filter(i=> !i.read).length;
+  document.title = unread ? `(${unread}) Notifications — Flick` : 'Notifications — Flick';
+  qs('#markAllReadBtn').textContent = unread ? `Mark all (${unread})` : 'Mark all';
+}
+
+/* ---------- Controls wiring ---------- */
+qs('#backBtn').addEventListener('click', ()=> history.back());
+qs('#markAllReadBtn').addEventListener('click', ()=> markAllRead());
+qs('#clearBtn').addEventListener('click', ()=> clearAll());
+qs('#filterBtn').addEventListener('click', ()=>{
+  const cur = qs('#filterBtn').dataset.mode || 'all';
+  if(cur === 'all'){
+    qs('#filterBtn').dataset.mode = 'unread';
+    qs('#filterBtn').textContent = 'Unread';
+    renderListFiltered('unread');
+  } else {
+    qs('#filterBtn').dataset.mode = 'all';
+    qs('#filterBtn').textContent = 'Filter';
+    renderList();
+  }
+});
+function renderListFiltered(mode){
+  renderList();
+  if(mode === 'unread'){
+    qsa('.item').forEach(it=> { if(!it.classList.contains('unread')) it.style.display = 'none'; });
+  }
+}
+
+/* ---------- Init ---------- */
+(function init(){
+  // seed demo only if empty
+  if(!load().length) seedDemo();
+  renderList();
+  setInterval(updateBadge,1200);
+  // keep scroll area naturally scrollable (CSS handles it)
+})();
+</script>
+</body>
+</html>
+```0
