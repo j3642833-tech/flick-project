@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FLICK — Home (fixed demo)</title>
+<style>
+  :root{
+    --bg:#f3f5f7;
+    --card:#fff;
+    --muted:#9aa0a6;
+    --accent:#111;
+    --pill:#f0f1f2;
+    --primary:#ff8c00;
+  }
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:#111}
+  /* top bar */
+  .topbar{position:fixed;left:0;right:0;top:0;height:68px;background:var(--card);display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid rgba(0,0,0,0.06);z-index:1200}
+  .brand{display:flex;align-items:center;gap:18px}
+  .logo{font-weight:800;color:#2f7bf6;font-size:28px;letter-spacing:1px}
+  .top-icons{display:flex;align-items:center;gap:14px}
+  .top-icons button{background:none;border:0;padding:6px;border-radius:8px;font-size:20px;cursor:pointer}
+  /* second row icons */
+  .toprow{position:fixed;left:0;right:0;top:68px;height:86px;background:var(--card);display:flex;align-items:center;justify-content:space-around;padding:6px;border-bottom:1px solid rgba(0,0,0,0.06);z-index:1100}
+  .toprow .item{display:flex;flex-direction:column;align-items:center;font-size:12px;color:#111;cursor:pointer}
+  .toprow .item .ico{font-size:28px;height:36px;line-height:36px;display:block}
+  /* content */
+  main{padding:170px 14px 110px;max-width:720px;margin:0 auto}
+  .post{background:var(--card);border-radius:14px;padding:14px;margin-bottom:16px;box-shadow:0 1px 0 rgba(0,0,0,0.03)}
+  .post .head{display:flex;align-items:center;gap:12px}
+  .avatar{width:48px;height:48px;border-radius:50%;background:#ddd;display:flex;align-items:center;justify-content:center;font-weight:700;color:#444;cursor:pointer}
+  .name{font-weight:700}
+  .meta{color:var(--muted);font-size:13px}
+  .post .text{margin-top:10px;font-size:16px;white-space:pre-wrap}
+  .post img.media{width:100%;border-radius:10px;margin-top:12px;max-height:420px;object-fit:cover;background:#000}
+  .post .counts{display:flex;gap:18px;padding:10px 0;color:var(--muted);align-items:center}
+  .counts .count{display:flex;align-items:center;gap:8px;font-size:15px;cursor:pointer}
+  .actions{display:flex;gap:12px;margin-top:8px}
+  .pill{background:var(--pill);padding:10px 16px;border-radius:999px;border:0;cursor:pointer;font-weight:600}
+  .comment-area{margin-top:10px;border-radius:12px;padding:12px;background:var(--pill)}
+  .comment-list{margin-top:8px}
+  .comment-item{background:#fff;padding:10px;border-radius:10px;margin-bottom:8px;box-shadow:0 1px 0 rgba(0,0,0,0.03)}
+  .reply-list{margin-left:10px;margin-top:8px}
+  /* bottom nav */
+  .bottomnav{position:fixed;left:0;right:0;bottom:0;height:68px;background:var(--card);display:flex;align-items:center;justify-content:space-around;padding:8px 18px;border-top:1px solid rgba(0,0,0,0.06);z-index:1200}
+  .bottomnav button{background:none;border:0;font-size:22px;cursor:pointer}
+  /* modals */
+  .modal-back{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:none;align-items:center;justify-content:center;z-index:1300}
+  .modal{width:92%;max-width:520px;background:var(--card);border-radius:12px;padding:16px}
+  .modal h3{margin:0 0 8px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .gift-card{background:var(--pill);padding:12px;border-radius:10px;text-align:left}
+  .gift-card .title{font-weight:700}
+  .gift-card small{color:var(--muted);display:block;margin-top:6px}
+  .close-btn{float:right;border:0;background:#eee;padding:6px 10px;border-radius:8px;cursor:pointer}
+  .send-row{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:12px}
+  .btn{background:#111;color:#fff;padding:10px 14px;border-radius:10px;border:0;cursor:pointer}
+  .ghost{background:transparent;border:1px solid rgba(0,0,0,0.08);color:#111}
+  /* reaction bubble */
+  .reactions{position:fixed;display:flex;gap:8px;background:#fff;padding:8px;border-radius:30px;box-shadow:0 6px 20px rgba(0,0,0,0.15);z-index:1500;pointer-events:auto}
+  .reaction{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer}
+  /* small user popup when clicking avatar */
+  .popup-user{position:fixed;display:none;z-index:1400;background:var(--card);border-radius:12px;padding:12px;right:18px;top:88px;box-shadow:0 6px 30px rgba(0,0,0,0.12)}
+  .popup-user .actions{display:flex;gap:10px;margin-top:10px}
+  @media(min-width:720px){main{padding-left:110px;padding-right:110px}}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="brand">
+    <button id="backBtn" title="Back" style="border:0;background:transparent;font-size:20px;margin-right:6px;cursor:pointer">←</button>
+    <div class="logo">FLICK</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <div style="font-weight:700;margin-right:8px">VIP</div>
+    <div class="top-icons">
+      <button id="searchBtn" title="Search">🔍</button>
+      <button id="menuBtn" title="Menu">☰</button>
+    </div>
+  </div>
+</header>
+
+<!-- SECOND ROW ICONS (use emoji so no broken image) -->
+<nav class="toprow" id="toprow" aria-hidden="false">
+  <div class="item" id="cartBtn"><span class="ico">🛒</span><div>Cart</div></div>
+  <div class="item" id="homeTopBtn"><span class="ico">🏠</span><div>Home</div></div>
+  <div class="item" id="liveTopBtn"><span class="ico">📡</span><div>Live</div></div>
+  <div class="item" id="alertTopBtn"><span class="ico">🔔</span><div>Notify <span id="badge" style="color:#fff;background:#ff3b30;border-radius:12px;padding:2px 6px;font-size:11px;margin-left:6px">3</span></div></div>
+  <div class="item" id="reelsTopBtn"><span class="ico">🎞️</span><div>Reels</div></div>
+</nav>
+
+<!-- small user popup -->
+<div class="popup-user" id="userPopup" role="dialog" aria-hidden="true">
+  <div style="display:flex;gap:12px;align-items:center">
+    <div class="avatar" id="popupAvatar">NV</div>
+    <div>
+      <div id="popupName" style="font-weight:700">Name</div>
+      <div class="meta" id="popupHandle">@handle</div>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn ghost" id="viewProfileBtn">View profile</button>
+    <button class="btn" id="followBtn">Follow</button>
+  </div>
+</div>
+
+<!-- gift modal -->
+<div class="modal-back" id="giftModalBack" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true">
+    <button class="close-btn" id="closeGiftModal">Close</button>
+    <h3 id="giftTitle">Send Gift</h3>
+    <div class="grid" id="inventoryGrid" aria-live="polite"></div>
+    <div class="send-row">
+      <button class="btn ghost" id="openCartBtn">Open Cart</button>
+      <button class="btn" id="sendGiftBtn">Send (demo)</button>
+    </div>
+  </div>
+</div>
+
+<!-- post gifts modal -->
+<div class="modal-back" id="postGiftsBack" aria-hidden="true">
+  <div class="modal">
+    <button class="close-btn" id="closePostGifts">Close</button>
+    <h3>Gifts received</h3>
+    <div id="postGiftsList" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- reactions bubble -->
+<div class="reactions" id="reactions" style="display:none;pointer-events:auto">
+  <div class="reaction" data-react="like">👍</div>
+  <div class="reaction" data-react="love">❤️</div>
+  <div class="reaction" data-react="fire">🔥</div>
+  <div class="reaction" data-react="laugh">😂</div>
+  <div class="reaction" data-react="wow">😮</div>
+</div>
+
+<!-- content -->
+<main id="feed" aria-live="polite"></main>
+
+<!-- bottom nav (storiesBtn instead of grid) -->
+<nav class="bottomnav" role="navigation" aria-label="Bottom navigation">
+  <button id="leaderboardBtn" title="Leaderboard">🏆</button>
+  <button id="storiesBtn" title="Stories">▦</button>
+  <button id="plusBtn" title="Create">＋</button>
+  <button id="inboxBtn" title="Inbox">✉️ <span id="inboxBadge" style="background:#ff3b30;color:white;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:6px">5</span></button>
+  <button id="profileBtn" title="Profile">👤</button>
+</nav>
+
+<script>
+/* ========= FIXED DEMO APP LOGIC (updated) =========
+   - storiesBtn id used (not grid)
+   - toprow uses emoji so icons won't break
+   - safe event delegation retained
+*/
+
+/* ---------- Demo data ---------- */
+const demoUserInventory = { Rose:3, Cake:2, Star:1, Diamond:0 };
+const posts = [];
+
+function randId(){ return 'p'+Math.random().toString(36).slice(2,9); }
+function nowAgo(h){ return h + 'h'; }
+
+for(let i=1;i<=10;i++){
+  posts.push({
+    id: randId(),
+    name: i%2? 'Alexa':'Sam Holt',
+    handle: i%2? 'alexa':'samholt',
+    avatarText: (i%2? 'A':'S'),
+    time: nowAgo(i*2),
+    text: (i%3 ? (i%2? 'Good morning! Here is a photo.' : 'Space is awesome!') : 'Upload third photo from gallery.'),
+    img: (i%2 ? ('https://via.placeholder.com/900x500?text=Image+'+i) : ''),
+    likes: 0,
+    liked:false,
+    reactions:{},
+    comments: [],
+    gifts:[]
+  });
+}
+
+/* ---------- Render feed ---------- */
+const feed = document.getElementById('feed');
+function escapeHtml(s){ return (s||'').toString().replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function renderFeed(){
+  feed.innerHTML = '';
+  posts.forEach(post=>{
+    const el = document.createElement('article');
+    el.className = 'post';
+    el.dataset.postId = post.id;
+
+    const mediaHtml = post.img ? `<img class="media" src="${post.img}" alt="post image">` : '';
+    el.innerHTML = `
+      <div class="head">
+        <div class="avatar" data-action="openProfile" data-name="${escapeHtml(post.name)}" data-handle="${escapeHtml(post.handle)}">${escapeHtml(post.avatarText)}</div>
+        <div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="name">${escapeHtml(post.name)}</div>
+            <div class="meta">${escapeHtml(post.time)}</div>
+          </div>
+          <div class="meta">Shared · ${escapeHtml(post.handle)}</div>
+        </div>
+      </div>
+      <div class="text">${escapeHtml(post.text)}</div>
+      ${mediaHtml}
+      <div class="counts">
+        <div class="count" data-role="likes" title="Likes"><span id="likes-${post.id}">${post.likes}</span> ❤️</div>
+        <div class="count" data-role="comments" title="Comments"><span id="comments-${post.id}">${post.comments.length}</span> 💬</div>
+        <div class="count" data-role="gifts" title="Gifts"><span id="gifts-${post.id}">${post.gifts.length}</span> 🎁</div>
+      </div>
+      <div class="actions">
+        <button class="pill likeBtn" data-action="like" aria-label="Like">Like</button>
+        <button class="pill commentBtn" data-action="comment" aria-label="Comment">Comment</button>
+        <button class="pill giftBtn" data-action="gift" aria-label="Gift">Gift</button>
+      </div>
+      <div class="comment-area" style="display:none" data-role="commentArea">
+        <div style="display:flex;gap:8px">
+          <input class="comment-input" type="text" placeholder="Write a comment..." style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.06)" />
+          <button class="btn sendCommentBtn" data-action="sendComment">Send</button>
+        </div>
+        <div class="comment-list" data-role="commentList"></div>
+      </div>
+    `;
+    feed.appendChild(el);
+    updatePostUI(post.id);
+  });
+}
+
+/* ---------- Update UI for single post ---------- */
+function updatePostUI(postId){
+  const p = posts.find(x=>x.id===postId);
+  if(!p) return;
+  const likesEl = document.getElementById('likes-'+postId);
+  const commentsEl = document.getElementById('comments-'+postId);
+  const giftsEl = document.getElementById('gifts-'+postId);
+  if(likesEl) likesEl.textContent = p.likes;
+  if(commentsEl) commentsEl.textContent = p.comments.length;
+  if(giftsEl) giftsEl.textContent = p.gifts.length;
+
+  const node = Array.from(document.querySelectorAll('.post')).find(n=>n.dataset.postId===postId);
+  if(node){
+    const list = node.querySelector('[data-role="commentList"]');
+    list.innerHTML = '';
+    p.comments.forEach((c, idx)=>{
+      const ci = document.createElement('div');
+      ci.className = 'comment-item';
+      ci.innerHTML = `<div style="display:flex;justify-content:space-between;gap:8px">
+                        <div><strong>${escapeHtml(c.user)}</strong></div>
+                        <div style="font-size:12px;color:var(--muted)">${escapeHtml(c.time || '')}</div>
+                      </div>
+                      <div style="margin-top:6px">${escapeHtml(c.text)}</div>
+                      <div style="margin-top:8px;display:flex;gap:8px;font-size:13px">
+                        <button class="ghost smallReply" data-post="${postId}" data-idx="${idx}">Reply</button>
+                        <button class="ghost smallLikeComment" data-post="${postId}" data-idx="${idx}">Like</button>
+                      </div>
+                      <div class="reply-list"></div>`;
+      const replyList = ci.querySelector('.reply-list');
+      (c.replies||[]).forEach(r=>{
+        const rdiv = document.createElement('div');
+        rdiv.style.padding='6px 8px'; rdiv.style.marginTop='6px'; rdiv.style.background='#fafafa'; rdiv.style.borderRadius='8px';
+        rdiv.innerHTML = `<strong>${escapeHtml(r.user)}</strong><div style="font-size:13px;margin-top:4px">${escapeHtml(r.text)}</div>`;
+        replyList.appendChild(rdiv);
+      });
+      list.appendChild(ci);
+    });
+  }
+}
+
+/* ---------- Delegated events ---------- */
+document.body.addEventListener('click', (e)=>{
+  const t = e.target;
+
+  if(e.target.closest('#searchBtn')){
+    window.location.href = "search.html";
+    return;
+}
+  if(t.closest('#menuBtn')) { showDemo('Menu coming later.'); return; }
+  if(t.closest('#cartBtn')) { window.location.href = 'cart.html'; return; }
+  if(t.closest('#homeTopBtn')) { window.scrollTo({top:0,behavior:'smooth'}); return; }
+  if(t.closest('#liveTopBtn')) { showDemo('Live list (demo)'); return; }
+  if(t.closest('#alertTopBtn')) { window.location.href = 'notifications.html'; return; }
+  if(t.closest('#reelsTopBtn')) { showDemo('Reels (demo)'); return; }
+
+  if(t.closest('#leaderboardBtn')) { showDemo('Leaderboard (demo)'); return; }
+  if(t.closest('#storiesBtn')) { showDemo('Stories (demo)'); return; } /* updated */
+  if(t.closest('#plusBtn')) { showDemo('Create post (demo)'); return; }
+  if(t.closest('#inboxBtn')) { showDemo('Inbox (demo)'); return; }
+  if(t.closest('#profileBtn')) { window.location.href = 'profile.html'; return; }
+  if(t.closest('#backBtn')) { history.back(); return; }
+
+  const avatar = t.closest('[data-action="openProfile"]');
+  if(avatar){
+    const name = avatar.dataset.name || 'User';
+    const handle = avatar.dataset.handle || 'handle';
+    openUserPopup(name, handle);
+    return;
+  }
+
+  const postEl = t.closest('.post');
+  if(!postEl) return;
+  const postId = postEl.dataset.postId;
+
+  if(t.closest('.likeBtn') || t.closest('[data-action="like"]')){
+    handleLike(postId);
+    return;
+  }
+  if(t.closest('.commentBtn') || t.closest('[data-action="comment"]')){
+    toggleCommentArea(postEl, postId);
+    return;
+  }
+  if(t.closest('.giftBtn') || t.closest('[data-action="gift"]')){
+    openGiftModal(postId);
+    return;      
+  }            
+  if(t.closest('[data-role="gifts"]')){
+    openPostGifts(postId);
+    return;
+  }
+  if(t.closest('.sendCommentBtn') || t.closest('[data-action="sendComment"]')){
+    const root = t.closest('.post');
+    const input = root.querySelector('.comment-input');
+    const text = input.value.trim();
+    if(!text) { toast('Comment empty'); return; }
+    const p = posts.find(x=>x.id===root.dataset.postId);
+    p.comments.push({ user:'You', text, time: new Date().toLocaleTimeString(), replies: [] });
+    input.value='';
+    updatePostUI(p.id);
+    return;
+  }
+  if(t.closest('.smallReply')){
+    const postId = t.dataset.post;
+    const idx = parseInt(t.dataset.idx,10);
+    const reply = prompt('Reply to comment (demo):');
+    if(reply && reply.trim()){
+      const p = posts.find(x=>x.id===postId);
+      p.comments[idx].replies = p.comments[idx].replies || [];
+      p.comments[idx].replies.push({ user:'You', text: reply.trim() });
+      updatePostUI(postId);
+    }
+    return;
+  }
+  if(t.closest('.smallLikeComment')){
+    toast('Comment liked (demo)');
+    return;
+  }
+});
+
+/* ---------- Long-press reactions ---------- */
+let longPressTimeout = null;
+feed.addEventListener('pointerdown', (e)=>{
+  const btn = e.target.closest('.likeBtn');
+  if(!btn) return;
+  const rect = btn.getBoundingClientRect();
+  const post = btn.closest('.post');
+  const postId = post && post.dataset.postId;
+  longPressTimeout = setTimeout(()=>{
+    showReactions(rect.left + rect.width/2, rect.top - 60, postId);
+  }, 450);
+});
+['pointerup','pointerleave','pointercancel'].forEach(ev => feed.addEventListener(ev, ()=>{ if(longPressTimeout){ clearTimeout(longPressTimeout); longPressTimeout = null; } }));
+
+document.getElementById('reactions').addEventListener('click', (e)=>{
+  const r = e.target.closest('.reaction');
+  if(!r) return;
+  const react = r.dataset.react;
+  const postId = r.dataset.postId || document.getElementById('reactions').dataset.postId;
+  if(!postId) return hideReactions();
+  const p = posts.find(x=>x.id===postId);
+  p.reactions[react] = (p.reactions[react]||0) + 1;
+  if(!p.liked){ p.liked = true; p.likes += 1; }
+  updatePostUI(postId);
+  hideReactions();
+});
+function showReactions(x,y,postId){
+  const box = document.getElementById('reactions');
+  box.style.left = Math.max(12, x - 120) + 'px';
+  box.style.top = Math.max(60, y) + 'px';
+  box.style.display = 'flex';
+  box.dataset.postId = postId;
+  box.querySelectorAll('.reaction').forEach(r => r.dataset.postId = postId);
+  setTimeout(()=>{ hideReactions(); }, 4000);
+}
+function hideReactions(){ const box = document.getElementById('reactions'); box.style.display='none'; delete box.dataset.postId; }
+
+/* ---------- Like function ---------- */
+function handleLike(postId){
+  const p = posts.find(x=>x.id===postId);
+  if(!p) return;
+  if(p.liked){ toast('Already liked (demo)'); return; }
+  p.likes += 1; p.liked = true;
+  updatePostUI(postId);
+}
+
+/* ---------- Toggle comment ---------- */
+function toggleCommentArea(node, postId){
+  const area = node.querySelector('[data-role="commentArea"]');
+  if(!area) return;
+  area.style.display = (area.style.display === 'block') ? 'none' : 'block';
+  if(area.style.display === 'block') updatePostUI(postId);
+}
+
+/* ---------- Gift modal ---------- */
+const giftModalBack = document.getElementById('giftModalBack');
+const inventoryGrid = document.getElementById('inventoryGrid');
+let activeGiftPost = null;
+
+function renderInventory(){
+  inventoryGrid.innerHTML = '';
+  Object.keys(demoUserInventory).forEach(k=>{
+    const cnt = demoUserInventory[k];
+    const price = (k==='Diamond'?500:(k==='Cake'?120:(k==='Rose'?50:200)));
+    const box = document.createElement('div');
+    box.className = 'gift-card';
+    box.innerHTML = `<div class="title">${escapeHtml(k)}</div><small>₹${price}</small><small style="margin-top:8px">You: ${cnt}</small><div style="margin-top:8px"><button class="btn ghost addCart" data-gift="${escapeHtml(k)}">+ add</button></div>`;
+    inventoryGrid.appendChild(box);
+  });
+  inventoryGrid.querySelectorAll('.addCart').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const name = b.dataset.gift;
+      demoUserInventory[name] = (demoUserInventory[name]||0) + 1;
+      renderInventory();
+      toast(name + ' added to inventory (demo)');
+    });
+  });
+}
+
+document.getElementById('closeGiftModal').addEventListener('click', ()=> giftModalBack.style.display='none');
+document.getElementById('openCartBtn').addEventListener('click', ()=> showDemo('Cart (demo)'));
+document.getElementById('sendGiftBtn').addEventListener('click', ()=>{
+  const available = Object.keys(demoUserInventory).find(k => demoUserInventory[k] > 0);
+  if(!available){ alert('No gifts in inventory'); return; }
+  demoUserInventory[available]--;
+  const p = posts.find(x=>x.id === activeGiftPost);
+  p.gifts.push({ item: available, from: 'You', at: new Date().toISOString() });
+  updatePostUI(activeGiftPost);
+  renderInventory();
+  giftModalBack.style.display='none';
+  toast('Gift sent (demo)');
+});
+
+function openGiftModal(postId){
+  activeGiftPost = postId;
+  document.getElementById('giftTitle').textContent = 'Send Gift';
+  renderInventory();
+  giftModalBack.style.display = 'flex';
+}
+
+/* ---------- Post gifts list ---------- */
+const postGiftsBack = document.getElementById('postGiftsBack');
+document.getElementById('closePostGifts').addEventListener('click', ()=> postGiftsBack.style.display='none');
+
+function openPostGifts(postId){
+  const p = posts.find(x=>x.id===postId);
+  const list = document.getElementById('postGiftsList');
+  list.innerHTML = '';
+  if(!p.gifts.length) list.innerHTML = '<div style="color:var(--muted)">No gifts yet</div>';
+  p.gifts.forEach(g=>{
+    const r = document.createElement('div');
+    r.style.padding='8px 0';
+    r.innerHTML = `<div style="font-weight:700">${escapeHtml(g.item)}</div><div style="color:var(--muted);font-size:13px">from ${escapeHtml(g.from)} • ${new Date(g.at).toLocaleString()}</div>`;
+    list.appendChild(r);
+  });
+  postGiftsBack.style.display='flex';
+}
+
+/* ---------- User popup ---------- */
+const userPopup = document.getElementById('userPopup');
+function openUserPopup(name, handle){
+  document.getElementById('popupName').textContent = name;
+  document.getElementById('popupHandle').textContent = '@'+handle;
+  userPopup.style.display = 'block';
+}
+document.getElementById('viewProfileBtn').addEventListener('click', ()=> { showDemo('Open profile page (demo)'); userPopup.style.display='none'; });
+document.getElementById('followBtn').addEventListener('click', ()=> { showDemo('Followed (demo)'); userPopup.style.display='none'; });
+
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('.popup-user') && !e.target.closest('[data-action="openProfile"]')) userPopup.style.display='none';
+  if(e.target === giftModalBack) giftModalBack.style.display='none';
+  if(e.target === postGiftsBack) postGiftsBack.style.display='none';
+});
+
+/* ---------- Utilities ---------- */
+function toast(msg){
+  const x = document.createElement('div');
+  x.textContent = msg;
+  Object.assign(x.style, {position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:'24px',background:'#111',color:'#fff',padding:'8px 12px',borderRadius:'8px',zIndex:9999});
+  document.body.appendChild(x);
+  setTimeout(()=>x.remove(), 1400);
+}
+function showDemo(msg){ alert(msg); }
+
+/* ---------- Init ---------- */
+renderFeed();
+(function(){
+  function goCart(ev){
+    try{ ev.preventDefault(); }catch(e){}
+    window.location.href = "cart.html";
+  }
+
+  document.addEventListener("click", function(e){
+    const btn = e.target.closest("#openCartBtn");
+    if(btn){ goCart(e); }
+  });
+
+  const b = document.getElementById("openCartBtn");
+  if(b){ b.addEventListener("click", goCart); }
+})();
+</script>
+</body>
+</html>
+```0

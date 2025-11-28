@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Flick Auth</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <base href="./">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+
+    body{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#000;
+    }
+
+    .card-wrap{
+      width:100%;
+      max-width:420px;
+      padding:16px;
+    }
+
+    .card{
+      background:linear-gradient(#ffc1dc,#ff6aa5);
+      border-radius:24px;
+      padding:24px 22px 28px;
+      box-shadow:0 18px 35px rgba(0,0,0,.5);
+      color:#000;
+    }
+
+    .title{
+      font-size:42px;
+      letter-spacing:4px;
+      text-align:center;
+      font-weight:900;
+      margin-bottom:22px;
+    }
+
+    label{
+      font-weight:700;
+      margin-bottom:4px;
+      font-size:15px;
+      display:block;
+    }
+
+    .field{
+      width:100%;
+      border-radius:18px;
+      border:none;
+      padding:10px 14px;
+      font-size:15px;
+      margin-bottom:12px;
+      background:#f3f6ff;
+      outline:none;
+    }
+
+    .password-row{
+      position:relative;
+    }
+    .password-row input{
+      padding-right:44px;
+    }
+    .toggle-eye{
+      position:absolute;
+      right:10px;
+      top:50%;
+      transform:translateY(-50%);
+      font-size:20px;
+      cursor:pointer;
+      user-select:none;
+    }
+
+    .row-inline{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin:4px 0 10px;
+      font-size:14px;
+    }
+
+    a{
+      color:#2f2fff;
+      text-decoration:underline;
+      font-size:14px;
+    }
+
+    .btn{
+      width:100%;
+      border:none;
+      border-radius:20px;
+      padding:11px 0;
+      font-size:17px;
+      font-weight:700;
+      text-align:center;
+      margin-top:10px;
+      cursor:pointer;
+    }
+    .btn-primary{
+      background:#463bff;
+      color:#fff;
+    }
+    .btn-outline{
+      background:transparent;
+      border:2px solid #f5e1ff;
+      color:#fff;
+    }
+
+    .section-title{
+      text-align:center;
+      margin-top:18px;
+      font-weight:900;
+      font-size:22px;
+    }
+
+    .status{
+      margin-top:10px;
+      text-align:center;
+      font-size:14px;
+      padding:6px 8px;
+      border-radius:14px;
+      display:none;
+    }
+    .status.err{
+      background:rgba(150,0,0,.18);
+      color:#4b0000;
+      display:block;
+    }
+
+    /* panels */
+    .panel{display:none;}
+    .panel.active{display:block;}
+
+    /* loader */
+    #loadingOverlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.45);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:999;
+    }
+    #loadingOverlay.hidden{display:none;}
+    .spinner{
+      width:46px;
+      height:46px;
+      border-radius:50%;
+      border:5px solid rgba(255,255,255,.3);
+      border-top-color:#fff;
+      animation:spin 0.9s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg);}}
+  </style>
+</head>
+<body>
+
+<div id="loadingOverlay" class="hidden">
+  <div class="spinner"></div>
+</div>
+
+<div class="card-wrap">
+
+  <!-- LOGIN -->
+  <div id="loginPanel" class="card panel active">
+    <div class="title">FLICK</div>
+
+    <label for="loginInput">Login (username / Gmail / phone)</label>
+    <input id="loginInput" class="field" placeholder="Enter your login" />
+
+    <div class="password-row">
+      <label for="loginPassword">Password</label>
+      <input id="loginPassword" class="field" type="password" placeholder="Password" />
+      <span id="loginEye" class="toggle-eye">🙈</span>
+    </div>
+
+    <div class="row-inline">
+      <input id="rememberMe" type="checkbox" />
+      <span>keep me logged in</span>
+    </div>
+
+    <div style="text-align:center;margin-bottom:2px;">
+      <a href="#" id="gotoForgot">forget password</a>
+    </div>
+
+    <button id="loginBtn" class="btn btn-primary">LOG IN</button>
+
+    <div class="section-title">SIGN UP</div>
+
+    <button id="gotoSignup" class="btn btn-outline">Create account</button>
+
+    <div class="status" id="statusLogin"></div>
+  </div>
+
+  <!-- SIGNUP -->
+  <div id="signupPanel" class="card panel">
+    <div class="title">Create account</div>
+
+    <label>Email / Phone</label>
+    <input id="signupEmail" class="field" placeholder="you@example.com or phone" />
+
+    <label>Username</label>
+    <input id="signupUsername" class="field" placeholder="Username" />
+
+    <label>Date of Birth</label>
+    <input id="signupDob" class="field" type="date" />
+
+    <label>Gender</label>
+    <select id="signupGender" class="field">
+      <option value="">Choose…</option>
+      <option>Male</option>
+      <option>Female</option>
+      <option>Other</option>
+      <option>Prefer not to say</option>
+    </select>
+
+    <label>Password</label>
+    <div class="password-row">
+      <input id="signupPassword" class="field" type="password" />
+      <span id="signupEye1" class="toggle-eye">🙈</span>
+    </div>
+
+    <label>Confirm password</label>
+    <div class="password-row">
+      <input id="signupConfirm" class="field" type="password" />
+      <span id="signupEye2" class="toggle-eye">🙈</span>
+    </div>
+
+    <div class="row-inline">
+      <input id="signupRules" type="checkbox" />
+      <span>I accept rules</span>
+    </div>
+
+    <div class="row-inline">
+      <input id="signupHuman" type="checkbox" />
+      <span>I am not a robot</span>
+    </div>
+
+    <button id="signupCreateBtn" class="btn btn-primary">Create account</button>
+
+    <div style="text-align:center;margin-top:10px;">
+      <a href="#" id="backToLogin1">Back to login</a>
+    </div>
+
+    <div class="status" id="statusSignup"></div>
+  </div>
+
+  <!-- FORGOT -->
+  <div id="forgotPanel" class="card panel">
+    <div class="title" style="font-size:28px;margin-bottom:12px;">Reset password</div>
+
+    <label>G-mail</label>
+    <input id="forgotEmail" class="field" placeholder="Enter your registered email" />
+
+    <button id="forgotSendBtn" class="btn btn-primary">Send reset link</button>
+
+    <div style="text-align:center;margin-top:12px;">
+      <a href="#" id="backToLogin2">Back to login</a>
+    </div>
+
+    <div class="status" id="statusForgot"></div>
+  </div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  sendPasswordResetEmail
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  addDoc
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCXv3k-mPWjuWztTWnjbuxEYqW6kNy2kEc",
+  authDomain: "flick-e24d4.firebaseapp.com",
+  projectId: "flick-e24d4",
+  storageBucket: "flick-e24d4.appspot.com",
+  messagingSenderId: "539688652066",
+  appId: "1:539688652066:web:116621cc211a49ed55a97b"
+};
+
+const ADMIN_EMAIL = "j3642833@gmail.com";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// panels
+const loginPanel=document.getElementById("loginPanel");
+const signupPanel=document.getElementById("signupPanel");
+const forgotPanel=document.getElementById("forgotPanel");
+const loadingOverlay=document.getElementById("loadingOverlay");
+
+function showPanel(p){
+  loginPanel.classList.remove("active");
+  signupPanel.classList.remove("active");
+  forgotPanel.classList.remove("active");
+  document.getElementById(p+"Panel").classList.add("active");
+}
+
+function setLoading(on){
+  loadingOverlay.classList.toggle("hidden",!on);
+}
+
+// remember me
+const loginInput=document.getElementById("loginInput");
+const loginPassword=document.getElementById("loginPassword");
+const rememberMe=document.getElementById("rememberMe");
+
+const savedEmail=localStorage.getItem("flick_email");
+const savedPass=localStorage.getItem("flick_pass");
+if(savedEmail){loginInput.value=savedEmail;rememberMe.checked=true;}
+if(savedPass){loginPassword.value=savedPass;}
+
+// eye toggle
+function eye(input,eye){
+  eye.addEventListener("click",()=>{
+    const p=input.type==="password";
+    input.type=p?"text":"password";
+    eye.textContent=p?"👁️":"🙈";
+  });
+}
+eye(loginPassword,document.getElementById("loginEye"));
+eye(document.getElementById("signupPassword"),document.getElementById("signupEye1"));
+eye(document.getElementById("signupConfirm"),document.getElementById("signupEye2"));
+
+// login
+document.getElementById("loginBtn").addEventListener("click",async()=>{
+  const email=loginInput.value.trim();
+  const pass=loginPassword.value.trim();
+  const s=document.getElementById("statusLogin");
+
+  if(!email||!pass){
+    s.textContent="Enter login and password.";
+    s.className="status err";
+    return;
+  }
+
+  setLoading(true);
+  try{
+    await signInWithEmailAndPassword(auth,email,pass);
+
+    if(rememberMe.checked){
+      localStorage.setItem("flick_email",email);
+      localStorage.setItem("flick_pass",pass);
+    }else{
+      localStorage.removeItem("flick_email");
+      localStorage.removeItem("flick_pass");
+    }
+
+    window.location.href="home.html";
+  }catch(e){
+    let msg="Login failed.";
+    if(e.code==="auth/wrong-password") msg="Incorrect password.";
+    if(e.code==="auth/user-not-found") msg="Account not found.";
+    if(e.code==="auth/invalid-email") msg="Invalid email.";
+    s.textContent=msg;
+    s.className="status err";
+  }
+  setLoading(false);
+});
+
+// signup nav
+document.getElementById("gotoSignup").addEventListener("click",()=>showPanel("signup"));
+document.getElementById("backToLogin1").addEventListener("click",()=>showPanel("login"));
+document.getElementById("backToLogin2").addEventListener("click",()=>showPanel("login"));
+document.getElementById("gotoForgot").addEventListener("click",(e)=>{e.preventDefault();showPanel("forgot");});
+
+// signup create
+document.getElementById("signupCreateBtn").addEventListener("click",async()=>{
+  const email=document.getElementById("signupEmail").value.trim();
+  const user=document.getElementById("signupUsername").value.trim();
+  const dob=document.getElementById("signupDob").value;
+  const gender=document.getElementById("signupGender").value;
+  const p1=document.getElementById("signupPassword").value;
+  const p2=document.getElementById("signupConfirm").value;
+  const rules=document.getElementById("signupRules").checked;
+  const human=document.getElementById("signupHuman").checked;
+  const s=document.getElementById("statusSignup");
+
+  if(!email||!user||!dob||!gender||!p1||!p2){
+    s.textContent="Fill all fields.";s.className="status err";return;
+  }
+  if(p1!==p2){s.textContent="Passwords do not match.";s.className="status err";return;}
+  if(p1.length<6){s.textContent="Password 6+ characters.";s.className="status err";return;}
+  if(!rules){s.textContent="Accept rules.";s.className="status err";return;}
+  if(!human){s.textContent="Confirm you are not robot.";s.className="status err";return;}
+
+  setLoading(true);
+  try{
+    const cred=await createUserWithEmailAndPassword(auth,email,p1);
+    await addDoc(collection(db,"users"),{
+      uid:cred.user.uid,
+      email,
+      username:user,
+      dob,
+      gender,
+      role:(email===ADMIN_EMAIL)?"Admin":"User",
+      createdAt:new Date().toISOString()
+    });
+
+    window.location.href="home.html";
+  }catch(e){
+    s.textContent=e.message;
+    s.className="status err";
+  }
+  setLoading(false);
+});
+
+// forgot
+document.getElementById("forgotSendBtn").addEventListener("click",async()=>{
+  const email=document.getElementById("forgotEmail").value.trim();
+  const s=document.getElementById("statusForgot");
+  if(!email){s.textContent="Enter your email.";s.className="status err";return;}
+
+  setLoading(true);
+  try{
+    await sendPasswordResetEmail(auth,email);
+    s.textContent="Reset link sent.";
+    s.className="status err";
+  }catch(e){
+    s.textContent=e.message;
+    s.className="status err";
+  }
+  setLoading(false);
+});
+</script>
+</body>
+</html>

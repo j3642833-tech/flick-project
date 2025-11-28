@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Following</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet"
+ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
+body{background:#f3f3f7;}
+
+.top-bar{
+  position:sticky;top:0;z-index:20;
+  background:#fff;border-bottom:1px solid #ddd;
+  padding:12px;display:flex;align-items:center;
+}
+.top-bar i{font-size:22px;cursor:pointer;}
+.top-bar h2{flex:1;text-align:center;font-size:20px;font-weight:700;margin-right:22px;}
+
+.list{
+  margin-top:10px;
+}
+.user-row{
+  background:#fff;margin:8px 10px;padding:12px;
+  border-radius:12px;border:1px solid #eee;
+  display:flex;align-items:center;gap:12px;
+  position:relative;
+}
+.user-row img{
+  width:48px;height:48px;border-radius:50%;object-fit:cover;background:#d0d0ff;
+}
+.user-info{flex:1;}
+.user-name{font-weight:700;font-size:16px;}
+.user-tag{color:#666;font-size:13px;margin-top:4px;}
+
+.menu-btn{
+  border:none;background:none;font-size:20px;cursor:pointer;
+}
+
+/* POPUP MENU */
+.popup{
+  position:absolute;right:10px;top:50px;
+  background:#fff;border:1px solid #ddd;border-radius:10px;
+  padding:8px 0;z-index:999;
+  width:140px;
+  box-shadow:0 4px 14px rgba(0,0,0,0.15);
+}
+.popup button{
+  width:100%;padding:10px;text-align:left;
+  border:none;background:transparent;cursor:pointer;font-size:14px;
+}
+.popup button:hover{
+  background:#f3f3f3;
+}
+</style>
+</head>
+
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <i class="fa-solid fa-arrow-left" onclick="history.back()"></i>
+  <h2>Following</h2>
+</div>
+
+<div class="list" id="listBox"></div>
+
+<script>
+/* ---------------------------
+   MOCK FOLLOWING USERS
+   Later will replace with Firebase
+----------------------------*/
+let followingUsers = [
+  {id:"u1", name:"Alice",    tag:"@alice01",    avatar:"https://via.placeholder.com/150/92c5ff/333?text=A"},
+  {id:"u2", name:"Michael",  tag:"@michael",    avatar:"https://via.placeholder.com/150/f0b3ff/333?text=M"},
+  {id:"u3", name:"Jessica",  tag:"@jessica12",  avatar:"https://via.placeholder.com/150/f5d18c/333?text=J"},
+  {id:"u4", name:"Ramesh",   tag:"@ramesh999",  avatar:"https://via.placeholder.com/150/c6ffc6/333?text=R"},
+];
+
+
+/* ---------------------------
+   RENDER LIST
+----------------------------*/
+function renderFollowing(){
+  const box = document.getElementById("listBox");
+  box.innerHTML = "";
+
+  followingUsers.forEach(user=>{
+    const row = document.createElement("div");
+    row.className = "user-row";
+    row.dataset.id = user.id;
+
+    row.innerHTML = `
+      <img src="${user.avatar}">
+      <div class="user-info">
+        <div class="user-name">${user.name}</div>
+        <div class="user-tag">${user.tag}</div>
+      </div>
+
+      <button class="menu-btn"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+    `;
+
+    // attach menu btn event
+    const menuBtn = row.querySelector(".menu-btn");
+    menuBtn.onclick = (e)=>{
+      e.stopPropagation();
+      closeAllMenus();
+      showMenu(row, user);
+    };
+
+    box.appendChild(row);
+  });
+}
+
+
+/* ---------------------------
+   SHOW POPUP MENU
+----------------------------*/
+function showMenu(row, user){
+  const menu = document.createElement("div");
+  menu.className = "popup";
+
+  menu.innerHTML = `
+    <button onclick="unfollowUser('${user.id}')">Unfollow</button>
+    <button onclick="blockUser('${user.id}')">Block</button>
+    <button onclick="messageUser('${user.id}')">Message</button>
+    <button onclick="viewProfile('${user.id}')">View profile</button>
+    <button onclick="reportUser('${user.id}')">Report</button>
+  `;
+
+  row.appendChild(menu);
+
+  // clicking anywhere else closes menu
+  document.addEventListener("click", closeAllMenus);
+}
+
+function closeAllMenus(){
+  document.querySelectorAll(".popup").forEach(p=>p.remove());
+}
+
+
+/* ---------------------------
+   MENU ACTIONS
+----------------------------*/
+function unfollowUser(id){
+  followingUsers = followingUsers.filter(u=>u.id!==id);
+  renderFollowing();
+  closeAllMenus();
+  alert("Unfollowed");
+}
+function blockUser(id){
+  closeAllMenus();
+  alert("User blocked (UI only).");
+}
+function messageUser(id){
+  closeAllMenus();
+  alert("Open chat screen (later).");
+}
+function viewProfile(id){
+  closeAllMenus();
+  window.location.href = "profile.html"; // later change to other user page
+}
+function reportUser(id){
+  closeAllMenus();
+  alert("Report sent.");
+}
+
+
+/* ---------------------------
+   INIT
+----------------------------*/
+renderFollowing();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profile</title>
+
+<link rel="stylesheet"
+ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+/* RESET */
+*{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif;}
+body{background:#f3f3f7;}
+
+/* HEADER */
+.top-bar{
+  position:sticky;top:0;background:#fff;
+  padding:12px;display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid #ddd;z-index:20;
+}
+.top-bar i{font-size:22px;cursor:pointer;}
+.top-bar h2{flex:1;text-align:center;font-size:20px;font-weight:700;}
+
+/* COVER */
+.cover-area{width:100%;height:180px;background:#d9e9ff;position:relative;}
+.cover-img{width:100%;height:100%;object-fit:cover;}
+#coverPicker{display:none;}
+.edit-cover-btn{
+  position:absolute;bottom:12px;right:12px;background:#000;color:#fff;
+  padding:8px 12px;border:none;border-radius:10px;cursor:pointer;z-index:50;
+}
+
+/* AVATAR */
+.avatar-wrap{text-align:center;margin-top:-60px;position:relative;z-index:30;}
+.avatar-img{width:120px;height:120px;border-radius:50%;border:4px solid #fff;background:#cfe0ff;object-fit:cover;}
+#avatarPicker{display:none;}
+.edit-avatar-btn{
+  position:absolute;right:50%;transform:translateX(50%);
+  bottom:-10px;padding:6px 8px;background:#000;color:#fff;border-radius:8px;border:none;cursor:pointer;
+}
+
+/* TEXT */
+.username{text-align:center;margin-top:20px;font-size:26px;font-weight:700;}
+.gender-age{text-align:center;font-size:14px;color:#666;margin-top:4px;}
+
+/* STATS */
+.stats-row{margin-top:12px;display:flex;justify-content:center;gap:12px;}
+.stat-box{
+  background:#fff;border:1px solid #ddd;padding:10px 16px;border-radius:12px;
+  cursor:pointer;text-align:center;
+}
+.vip-box{
+  background:linear-gradient(90deg,#ffd85b,#ffb300);
+  border:1px solid #e6a600;color:#000;font-weight:700;
+}
+
+/* BIO */
+.bio-box{
+  width:92%;margin:18px auto;background:#fff;padding:14px;border-radius:12px;
+  text-align:center;border:1px solid #eee;
+}
+
+/* XP */
+.xp-text{text-align:center;font-size:14px;color:#666;}
+.xp-bar{width:80%;height:8px;background:#eee;margin:10px auto;border-radius:8px;}
+#xpFill{width:0%;height:100%;background:linear-gradient(90deg,#ffd85b,#ffb300);border-radius:8px;}
+
+/* TABS */
+.tabs{
+  margin-top:10px;display:flex;justify-content:space-around;background:#fff;
+  padding:12px 0;border-bottom:1px solid #ddd;
+}
+.tab{font-size:17px;cursor:pointer;padding:6px;}
+.tab.active{font-weight:700;border-bottom:3px solid #000;}
+
+/* CONTENT */
+.tabPage{display:none;padding:20px;}
+.tabPage.active{display:block;}
+
+/* POST CARD */
+.post-card{
+  background:#fff;border:1px solid #eee;border-radius:12px;padding:12px;margin:12px 0;
+  position:relative;
+}
+.delete-post{
+  position:absolute;top:10px;right:10px;background:#000;color:#fff;
+  border:none;border-radius:8px;padding:6px 10px;cursor:pointer;
+}
+
+/* COMMENTS MODAL */
+.modal{
+  position:fixed;inset:0;background:rgba(0,0,0,0.45);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;z-index:99999;
+}
+.modal-box{
+  background:#fff;width:100%;max-width:640px;max-height:86vh;
+  border-radius:12px;padding:14px;overflow:auto;
+}
+
+/* React popup */
+.react-popup{
+  position:fixed;background:#fff;display:flex;gap:10px;
+  padding:10px 14px;border-radius:14px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.15);z-index:999999;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div class="top-bar">
+  <i class="fa-solid fa-arrow-left" onclick="history.back()"></i>
+  <h2>Profile</h2>
+</div>
+
+<!-- COVER -->
+<div class="cover-area">
+  <img id="coverImg" class="cover-img">
+  <button id="editCoverBtn" class="edit-cover-btn">Edit cover</button>
+  <input id="coverPicker" type="file" accept="image/*">
+</div>
+
+<!-- AVATAR -->
+<div class="avatar-wrap">
+  <img id="avatarImg" class="avatar-img">
+  <button id="editAvatarBtn" class="edit-avatar-btn"><i class="fa-solid fa-camera"></i></button>
+  <input id="avatarPicker" type="file" accept="image/*">
+</div>
+
+<!-- TEXT -->
+<div id="usernameTxt" class="username">your_username</div>
+<div id="genderAgeTxt" class="gender-age">Gender · Age</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <button id="btnFollowing" class="stat-box">Following · <span id="followingCount">0</span></button>
+  <button id="btnVip" class="stat-box vip-box">VIP <span id="vipLevel">0</span></button>
+  <button id="btnFollowers" class="stat-box">Followers · <span id="followersCount">0</span></button>
+</div>
+
+<!-- BIO -->
+<div id="bioTxt" class="bio-box">This is the bio. Edit me.</div>
+
+<!-- XP -->
+<div id="xpText" class="xp-text">0 / 500 XP</div>
+<div class="xp-bar"><div id="xpFill"></div></div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" data-tab="postTab">post</div>
+  <div class="tab" data-tab="photoTab">photos</div>
+  <div class="tab" data-tab="reelTab">reels</div>
+  <div class="tab" data-tab="fanTab">top fan</div>
+</div>
+
+<!-- TAB CONTENT -->
+<div id="postTab" class="tabPage active">
+  <div id="noPostMsg"
+       style="text-align:center;color:#666;padding:18px;background:#fff;border:1px solid #eee;border-radius:12px;">
+    No posts yet
+  </div>
+  <button id="addPostBtn"
+          style="display:block;margin:18px auto;background:#000;color:#fff;padding:12px 20px;border-radius:10px;border:none;font-size:16px;cursor:pointer;">
+    + Add post
+  </button>
+</div>
+
+<div id="photoTab" class="tabPage">
+  <div id="photoList"></div>
+</div>
+
+<div id="reelTab" class="tabPage">
+  <div id="reelList"></div>
+</div>
+
+<div id="fanTab" class="tabPage">
+  <div style="text-align:center;color:#666;padding:18px;background:#fff;border:1px solid #eee;border-radius:12px;">
+    Top fans not available
+  </div>
+</div>
+
+
+<script>
+/* =============================== */
+/*     BASIC HELPERS               */
+/* =============================== */
+function escapeHtml(s){return (s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");}
+function toast(msg,t=1300){
+  const d=document.createElement('div');
+  d.textContent=msg;
+  Object.assign(d.style,{position:'fixed',bottom:'20px',left:'50%',transform:'translateX(-50%)',
+    background:'#000',color:'#fff',padding:'8px 12px',borderRadius:'8px',zIndex:999999});
+  document.body.appendChild(d);setTimeout(()=>d.remove(),t);
+}
+
+/* =============================== */
+/*  TABS                           */
+/* =============================== */
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".tabPage").forEach(p=>p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById(tab.dataset.tab).classList.add("active");
+  };
+});
+
+/* =============================== */
+/*   COVER + AVATAR PICKERS       */
+/* =============================== */
+editCoverBtn.onclick=()=>coverPicker.click();
+coverPicker.onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>coverImg.src=r.result;
+  r.readAsDataURL(f);
+};
+
+editAvatarBtn.onclick=()=>avatarPicker.click();
+avatarPicker.onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>avatarImg.src=r.result;
+  r.readAsDataURL(f);
+};
+
+/* =============================== */
+/*       REACTIONS DATA            */
+/* =============================== */
+const REACTIONS=[
+  {id:'like',emoji:'👍'},
+  {id:'love',emoji:'❤️'},
+  {id:'care',emoji:'🤗'},
+  {id:'haha',emoji:'😄'},
+  {id:'wow',emoji:'😯'},
+  {id:'sad',emoji:'😢'},
+  {id:'angry',emoji:'😡'}
+];
+
+function makeReactionsPopup(onPick){
+  const p=document.createElement('div');
+  p.className='react-popup';
+  REACTIONS.forEach(r=>{
+    const b=document.createElement('button');
+    b.textContent=r.emoji;
+    b.style.cssText="border:none;background:none;font-size:24px;cursor:pointer;";
+    b.onclick=()=>onPick(r);
+    p.appendChild(b);
+  });
+  return p;
+}
+
+/* =============================== */
+/* ADD POST (text + image + video) */
+/* =============================== */
+addPostBtn.onclick=openCreatePostModal;
+
+function openCreatePostModal(){
+  const modal=document.createElement('div');
+  modal.className='modal';
+  modal.innerHTML=`
+    <div class="modal-box">
+      <h3>Create Post</h3>
+      <textarea id="pText" placeholder="Write something..." style="width:100%;height:100px;border:1px solid #ddd;padding:10px;border-radius:8px;"></textarea>
+
+      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+        <button id="pickImg" style="padding:6px 10px;border-radius:8px;border:1px solid #ddd;cursor:pointer;">📷 Image</button>
+        <button id="pickVid" style="padding:6px 10px;border-radius:8px;border:1px solid #ddd;cursor:pointer;">🎞️ Video</button>
+        <div id="preview"></div>
+      </div>
+
+      <input id="mediaPick" type="file" accept="image/*,video/*" style="display:none">
+
+      <div style="display:flex;gap:10px;margin-top:15px;">
+        <button id="pubBtn" style="flex:1;background:#000;color:#fff;padding:10px;border-radius:8px;">Publish</button>
+        <button id="canBtn" style="flex:1;background:#eee;padding:10px;border-radius:8px;">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const mp=modal.querySelector('#mediaPick');
+  const preview=modal.querySelector('#preview');
+  let mediaData=null,mediaType=null;
+
+  modal.querySelector('#pickImg').onclick=()=>{mp.accept="image/*";mp.click();};
+  modal.querySelector('#pickVid').onclick=()=>{mp.accept="video/*";mp.click();};
+
+  mp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=()=>{
+      mediaData=r.result;
+      mediaType=f.type.startsWith('video')?'video':'image';
+      if(mediaType==='image')preview.innerHTML=`<img src="${mediaData}" style="max-width:100%;border-radius:8px;margin-top:8px;">`;
+      else preview.innerHTML=`<video controls style="max-width:100%;border-radius:8px;margin-top:8px;"><source src="${mediaData}"></video>`;
+    };
+    r.readAsDataURL(f);
+  };
+
+  modal.querySelector('#pubBtn').onclick=()=>{
+    const text=modal.querySelector('#pText').value.trim();
+    if(!text && !mediaData){toast("Write something or add media");return;}
+    insertPost(text,mediaData,mediaType);
+    modal.remove();
+  };
+  modal.querySelector('#canBtn').onclick=()=>modal.remove();
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+}
+
+/* =============================== */
+/* INSERT POST                     */
+/* =============================== */
+function insertPost(text,mediaData,mediaType){
+  const postTab=document.getElementById("postTab");
+  const addBtn=document.getElementById("addPostBtn");
+  document.getElementById("noPostMsg").style.display="none";
+
+  const card=document.createElement('div');
+  card.className='post-card';
+  const id="post_"+Date.now();
+
+  let mediaHTML="";
+  if(mediaType==="image")
+    mediaHTML=`<img src="${mediaData}" style="width:100%;border-radius:8px;margin-top:8px;">`;
+  else if(mediaType==="video")
+    mediaHTML=`<video controls style="width:100%;border-radius:8px;margin-top:8px;"><source src="${mediaData}"></video>`;
+
+  card.innerHTML=`
+    <button class="delete-post">Delete</button>
+    <div style="display:flex;gap:12px;">
+      <img src="${avatarImg.src}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">
+      <div style="flex:1;">
+        <div style="font-weight:700;">You</div>
+        <div style="margin-top:6px;">${escapeHtml(text)}</div>
+        ${mediaHTML}
+
+        <div style="display:flex;gap:18px;margin-top:10px;border-top:1px solid #eee;padding-top:10px;">
+          <button class="btn-like" style="background:none;border:none;cursor:pointer;">🤍 <span class="like-count">0</span></button>
+          <button class="btn-comment" style="background:none;border:none;cursor:pointer;">💬 <span class="comment-count">0</span></button>
+          <button class="btn-share" style="background:none;border:none;cursor:pointer;">↗️</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  card._comments=[];
+  card._likes={};
+  REACTIONS.forEach(r=>card._likes[r.id]=0);
+  card._userReaction=null;
+
+  /* Push image to PHOTOS */
+  if(mediaType==="image"){
+    const ph=document.getElementById("photoList");
+    const img=document.createElement("img");
+    img.src=mediaData;
+    img.style="width:100%;border-radius:10px;margin-bottom:12px;";
+    ph.appendChild(img);
+  }
+
+  /* Push video to REELS */
+  if(mediaType==="video"){
+    const rl=document.getElementById("reelList");
+    const v=document.createElement("video");
+    v.controls=true;
+    v.src=mediaData;
+    v.style="width:100%;border-radius:10px;margin-bottom:12px;";
+    rl.appendChild(v);
+  }
+
+  postTab.insertBefore(card,addBtn);
+
+  /* DELETE */
+  card.querySelector(".delete-post").onclick=()=>card.remove();
+
+  /* REACTIONS */
+  const likeBtn=card.querySelector(".btn-like");
+  const likeCount=card.querySelector(".like-count");
+
+  likeBtn.onclick=()=>{
+    const popup=makeReactionsPopup(r=>{
+      if(card._userReaction)
+        card._likes[card._userReaction]--;
+      card._userReaction=r.id;
+      card._likes[r.id]++;
+      likeCount.textContent=Object.values(card._likes).reduce((a,b)=>a+b,0);
+      likeBtn.innerHTML=`${r.emoji} <span class="like-count">${likeCount.textContent}</span>`;
+      popup.remove();
+    });
+    document.body.appendChild(popup);
+    const rect=likeBtn.getBoundingClientRect();
+    popup.style.left=(rect.left)+"px";
+    popup.style.top=(rect.top-60)+"px";
+    setTimeout(()=>document.addEventListener("click",function rm(e){
+      if(!popup.contains(e.target)){popup.remove();document.removeEventListener("click",rm);}
+    }));
+  };
+
+  /* COMMENTS */
+  const commentBtn=card.querySelector(".btn-comment");
+  commentBtn.onclick=()=>openCommentsModal(card);
+}
+
+/* =============================== */
+/*   NEW COMMENTS SYSTEM (FULL)    */
+/* =============================== */
+function openCommentsModal(card){
+  const modal = document.createElement("div");
+  modal.className = "modal";
+
+  modal.innerHTML = `
+    <div class="modal-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <b>Comments</b>
+        <button id="closeC" style="background:none;border:none;font-size:20px;">×</button>
+      </div>
+
+      <div id="cList" style="margin-top:10px;"></div>
+
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <input id="cInput" placeholder="Write a comment..." style="flex:1;border:1px solid #eee;padding:10px;border-radius:8px;">
+        <button id="cSend" style="padding:10px 15px;background:#111;color:#fff;border-radius:8px;border:none;">
+          Send
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  const list = modal.querySelector("#cList");
+  const input = modal.querySelector("#cInput");
+
+  function render(){
+    list.innerHTML = "";
+
+    card._comments.forEach((c)=>{
+      const item = document.createElement("div");
+      item.style.cssText = "padding:10px;border-bottom:1px solid #eee;";
+
+      item.innerHTML = `
+        <div><b>You</b></div>
+        <div style="margin-top:6px;">${escapeHtml(c.text)}</div>
+
+        <div style="margin-top:6px;font-size:14px;">
+          👍 ${c.likes} &nbsp; 👎 ${c.dislikes}
+          &nbsp; <button class="replyBtn" data-id="${c.id}" style="background:none;border:none;color:blue;">Reply</button>
+        </div>
+
+        <div style="margin-left:15px;margin-top:6px;" class="replies">
+          ${c.replies.map(r => `
+            <div style="padding:6px 0;">
+              <b>You</b> — ${escapeHtml(r.text)}
+            </div>
+          `).join("")}
+        </div>
+
+        <div class="replyBox" data-id="${c.id}" style="display:none;margin-top:8px;">
+          <input class="replyInput" placeholder="Write reply..." style="width:80%;padding:6px;border-radius:6px;border:1px solid #ccc;">
+          <button class="sendReply" data-id="${c.id}" style="padding:6px 10px;border:none;background:#111;color:#fff;border-radius:6px;">Send</button>
+        </div>
+      `;
+
+      list.appendChild(item);
+    });
+  }
+
+  render();
+
+  /* SEND COMMENT */
+  modal.querySelector("#cSend").onclick = ()=> {
+    const t = input.value.trim();
+    if(!t) return;
+
+    card._comments.push({
+      id: Date.now()+"",
+      text: t,
+      likes: 0,
+      dislikes: 0,
+      replies: []
+    });
+
+    input.value = "";
+    render();
+    card.querySelector(".comment-count").textContent = card._comments.length;
+  };
+
+  /* REPLY HANDLER */
+  list.addEventListener("click", (e)=>{
+    if(e.target.classList.contains("replyBtn")){
+      const id = e.target.dataset.id;
+      const box = list.querySelector(`.replyBox[data-id="${id}"]`);
+      box.style.display = box.style.display === "none" ? "block" : "none";
+    }
+
+    if(e.target.classList.contains("sendReply")){
+      const id = e.target.dataset.id;
+      const box = list.querySelector(`.replyBox[data-id="${id}"]`);
+      const inputR = box.querySelector(".replyInput");
+
+      const text = inputR.value.trim();
+      if(!text) return;
+
+      const comment = card._comments.find(a => a.id === id);
+      comment.replies.push({text});
+
+      inputR.value = "";
+      box.style.display = "none";
+      render();
+    }
+  });
+
+  /* CLOSE */
+  modal.querySelector("#closeC").onclick = ()=> modal.remove();
+  modal.onclick = (e)=> { if(e.target === modal) modal.remove(); };
+}
+/* ----- quick fixes: restore bio & re-enable buttons ----- */
+(function(){
+  // 1) remove stray modal overlays that may block UI (only ones created by our code)
+  document.querySelectorAll('.modal, .react-popup').forEach(el=>{
+    // if the modal still contains a modal-box (active UI) keep it, otherwise remove leftover
+    if(!el.querySelector('.modal-box')) el.remove();
+  });
+
+  // 2) ensure no elements are left with pointer-events:none (bring controls back)
+  document.querySelectorAll('button, input, textarea, [role="button"]').forEach(el=>{
+    if(getComputedStyle(el).pointerEvents === 'none') el.style.pointerEvents = 'auto';
+  });
+
+  // 3) rebind bio edit (safe - will not overwrite if you already have a custom handler)
+  const bioEl = document.getElementById('bioTxt');
+  if(bioEl){
+    bioEl.style.cursor = 'text';
+    bioEl.addEventListener('click', function onBioEdit(e){
+      // If some other handler set contentEditable, prefer that - otherwise prompt
+      if(bioEl.isContentEditable) return;
+      const val = prompt('Edit bio:', bioEl.textContent || '');
+      if(val !== null) bioEl.textContent = val;
+    }, {passive:true});
+  }
+
+  // 4) re-hook Add Post button to openCreatePostModal if exists
+  const addBtn = document.getElementById('addPostBtn');
+  if(addBtn){
+    addBtn.style.pointerEvents = 'auto';
+    addBtn.onclick = (e)=>{
+      e.preventDefault();
+      if(typeof openCreatePostModal === 'function'){
+        openCreatePostModal();
+      } else {
+        console.warn('openCreatePostModal not found');
+        // fallback: trigger click on element that created it previously (if any)
+        const fallback = document.querySelector('[data-open-post]') || null;
+        if(fallback) fallback.click();
+      }
+    };
+  }
+
+  // 5) ensure cover/avatar buttons are clickable (they should already be)
+  ['editCoverBtn','editAvatarBtn'].forEach(id=>{
+    const b = document.getElementById(id);
+    if(b){ b.style.pointerEvents = 'auto'; b.disabled = false; }
+  });
+
+  // 6) delegated fallback for comment button / share if original handlers missing
+  document.body.addEventListener('click', function(e){
+    const commentBtn = e.target.closest('.btn-comment');
+    if(commentBtn){
+      const card = commentBtn.closest('.post-card');
+      if(card){
+        // prefer existing function if it expects (card, countEl)
+        const countEl = card.querySelector('.comment-count');
+        if(typeof openCommentsModal === 'function'){
+          try{ openCommentsModal(card, countEl); }catch(err){ console.warn(err); }
+        } else {
+          // simple fallback: prompt for a comment and add to card._comments
+          const t = prompt('Write a comment:');
+          if(t){
+            card._comments = card._comments || [];
+            card._comments.push({ id: Date.now()+'', text: t, likes:0, dislikes:0, replies:[] });
+            if(countEl) countEl.textContent = card._comments.length;
+          }
+        }
+      }
+    }
+
+    const likeBtn = e.target.closest('.btn-like');
+    if(likeBtn){
+      const card = likeBtn.closest('.post-card');
+      if(card){
+        // toggle simple heart if no reaction system present
+        card._likes = card._likes || {like:0};
+        card._userReaction = card._userReaction || null;
+        if(!card._userReaction){
+          card._likes.like++; card._userReaction = 'like';
+        } else {
+          card._likes.like = Math.max(0, (card._likes.like||0)-1); card._userReaction = null;
+        }
+        const span = card.querySelector('.like-count');
+        if(span) span.textContent = Object.values(card._likes).reduce((a,b)=>a+b,0);
+      }
+    }
+  });
+
+  // 7) small safety: remove any global blocking overlays with very high z-index that are empty
+  document.querySelectorAll('div').forEach(d=>{
+    const z = parseInt(getComputedStyle(d).zIndex) || 0;
+    if(z > 90000 && d.childElementCount === 0) d.remove();
+  });
+
+  // done
+  console.log('Quick UI fixes applied.');
+})();
+/* quick patch: empty-bio prompt + re-enable UI + safe fallback handlers */
+(function(){
+  // remove leftover empty overlays that block clicks
+  document.querySelectorAll('.modal, .react-popup').forEach(el=>{
+    if(!el.querySelector('.modal-box')) el.remove();
+  });
+  // ensure controls accept clicks
+  document.querySelectorAll('button, input, textarea, [role="button"]').forEach(el=>{
+    el.style.pointerEvents = 'auto';
+    el.disabled = false;
+  });
+
+  // bio: replace handler so prompt opens with an empty input (user can clear)
+  const bioEl = document.getElementById('bioTxt');
+  if(bioEl){
+    bioEl.style.cursor = 'text';
+    bioEl.onclick = function(){
+      const newVal = prompt('Edit bio:', ''); // <-- empty default now
+      if(newVal !== null) bioEl.textContent = newVal;
+    };
+  }
+
+  // safe fallback functions: only run when the element has NO existing working handler
+  function hasWorkingHandler(el){
+    // heuristic: if element has onclick property that is a function, assume handled
+    if(!el) return false;
+    try{ if(typeof el.onclick === 'function') return true; }catch(e){}
+    return false;
+  }
+
+  // Add Post fallback
+  const addBtn = document.getElementById('addPostBtn');
+  if(addBtn && !hasWorkingHandler(addBtn)){
+    addBtn.onclick = function(e){
+      e.preventDefault();
+      if(typeof openCreatePostModal === 'function'){ openCreatePostModal(); }
+      else { alert('Add post function missing'); }
+    };
+  }
+
+  // Delegated fallback for post actions (like/comment/share/delete)
+  document.body.addEventListener('click', function(e){
+    // delete
+    const del = e.target.closest('.delete-post');
+    if(del && !hasWorkingHandler(del)){
+      const card = del.closest('.post-card');
+      if(card && confirm('Delete this post?')) card.remove();
+      return;
+    }
+
+    // like (simple toggle fallback)
+    const like = e.target.closest('.btn-like');
+    if(like && !hasWorkingHandler(like)){
+      const card = like.closest('.post-card');
+      if(!card) return;
+      card._likes = card._likes || {like:0};
+      card._userReaction = card._userReaction || null;
+      if(!card._userReaction){
+        card._likes.like = (card._likes.like||0)+1; card._userReaction='like';
+      } else {
+        card._likes.like = Math.max(0, (card._likes.like||0)-1); card._userReaction=null;
+      }
+      const span = card.querySelector('.like-count');
+      if(span) span.textContent = Object.values(card._likes).reduce((a,b)=>a+b,0);
+      return;
+    }
+
+    // comment fallback: opens existing openCommentsModal if available, otherwise simple prompt
+    const comment = e.target.closest('.btn-comment');
+    if(comment && !hasWorkingHandler(comment)){
+      const card = comment.closest('.post-card');
+      if(!card) return;
+      if(typeof openCommentsModal === 'function'){
+        try{ openCommentsModal(card, card.querySelector('.comment-count')); }catch(err){ console.warn(err); }
+      } else {
+        const t = prompt('Write a comment:');
+        if(t){
+          card._comments = card._comments || [];
+          card._comments.push({ id: Date.now()+'', text: t, likes:0, dislikes:0, replies:[] });
+          const cc = card.querySelector('.comment-count'); if(cc) cc.textContent = card._comments.length;
+        }
+      }
+      return;
+    }
+
+    // share fallback: copy link
+    const share = e.target.closest('.btn-share');
+    if(share && !hasWorkingHandler(share)){
+      const card = share.closest('.post-card');
+      if(!card) return;
+      const text = window.location.href + '#' + (card.dataset.postId || Date.now());
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(()=> alert('Link copied'), ()=> prompt('Copy link:', text));
+      } else {
+        prompt('Copy link:', text);
+      }
+      return;
+    }
+  }, true);
+
+  // final safety: remove invisible full-screen divs with very high z-index and no content
+  document.querySelectorAll('div').forEach(d=>{
+    const z = parseInt(getComputedStyle(d).zIndex) || 0;
+    if(z > 90000 && d.childElementCount === 0) d.remove();
+  });
+
+  console.log('UI quick-patch applied (bio prompt empty + fallbacks).');
+})();
+(function(){
+  // small helpers
+  function $id(id){ return document.getElementById(id) || null; }
+  function safeLog(...a){ try{ console.log('[UI-FIX]',...a); }catch(e){} }
+
+  // 1) Remove leftover empty overlays that block clicks
+  document.querySelectorAll('div,section').forEach(d=>{
+    try{
+      const z = parseInt(getComputedStyle(d).zIndex) || 0;
+      // remove fullscreen empty overlays created accidentally
+      if(z > 90000 && d.childElementCount === 0){ d.remove(); safeLog('removed empty overlay', d); }
+    }catch(e){}
+  });
+  // Also remove modals that have no modal-box (stale)
+  document.querySelectorAll('.modal, .react-popup').forEach(el=>{
+    if(!el.querySelector || !el.querySelector('.modal-box')){
+      if(!el.querySelector || el.childElementCount === 0) { el.remove(); safeLog('removed leftover modal/react-popup'); }
+    }
+  });
+
+  // 2) Re-enable pointer events & restore visuals for interactive elements
+  document.querySelectorAll('button, input, textarea, [role="button"], a').forEach(el=>{
+    try{
+      el.style.pointerEvents = el.style.pointerEvents === 'none' ? 'auto' : el.style.pointerEvents;
+      el.disabled = el.disabled === true ? false : el.disabled;
+      // make sure opacity not permanently faded
+      if(el.style.opacity && parseFloat(el.style.opacity) < 0.7) el.style.opacity = '';
+    }catch(e){}
+  });
+
+  // 3) Safe test for "already has click handler" (heuristic)
+  function hasClickHandler(el){
+    if(!el) return false;
+    try{
+      if(typeof el.onclick === 'function') return true; // inline onclick or previously assigned
+      // if we've attached via dataset marker earlier, treat as handled
+      if(el.dataset && el.dataset._handlerBound === '1') return true;
+      // if there are event listeners accessible via getEventListeners (devtools only) we skip
+    }catch(e){}
+    return false;
+  }
+
+  // 4) Mark an element as bound (so we don't double-bind)
+  function markBound(el){
+    try{ if(el && el.dataset) el.dataset._handlerBound = '1'; }catch(e){}
+  }
+
+  // 5) Fallback handlers (only attach if there isn't a handler)
+  // Add Post
+  const addBtn = $id('addPostBtn');
+  if(addBtn && !hasClickHandler(addBtn)){
+    addBtn.addEventListener('click', (ev)=>{
+      ev.preventDefault();
+      if(typeof openCreatePostModal === 'function'){ openCreatePostModal(); }
+      else { alert('Create Post function missing'); }
+    });
+    markBound(addBtn);
+    safeLog('fallback bound: addPostBtn');
+  }
+
+  // Cover / Avatar
+  const coverBtn = $id('editCoverBtn');
+  const coverPicker = $id('coverPicker');
+  if(coverBtn && coverPicker && !hasClickHandler(coverBtn)){
+    coverBtn.addEventListener('click', ()=> coverPicker.click());
+    markBound(coverBtn);
+    safeLog('fallback bound: editCoverBtn');
+  }
+  const avatarBtn = $id('editAvatarBtn');
+  const avatarPicker = $id('avatarPicker');
+  if(avatarBtn && avatarPicker && !hasClickHandler(avatarBtn)){
+    avatarBtn.addEventListener('click', ()=> avatarPicker.click());
+    markBound(avatarBtn);
+    safeLog('fallback bound: editAvatarBtn');
+  }
+
+  // Following / VIP / Followers stat buttons
+  (function(){
+    const followBtn = $id('btnFollowing'), followCount = $id('followingCount');
+    if(followBtn && followCount && !hasClickHandler(followBtn)){
+      followBtn.addEventListener('click', ()=>{
+        const n = Number(followCount.textContent||0);
+        followCount.textContent = n === 0 ? 1 : 0; // toggle simple demo
+      });
+      markBound(followBtn);
+      safeLog('fallback bound: btnFollowing');
+    }
+
+    const vipBtn = $id('btnVip'), vipLevel = $id('vipLevel');
+    if(vipBtn && vipLevel && !hasClickHandler(vipBtn)){
+      vipBtn.addEventListener('click', ()=>{
+        const cur = Number(vipLevel.textContent||0);
+        vipLevel.textContent = cur + 1;
+      });
+      // long-press reset
+      let t = null;
+      vipBtn.addEventListener('mousedown', ()=> t = setTimeout(()=> vipLevel.textContent = 0, 700));
+      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev => vipBtn.addEventListener(ev, ()=> { if(t){ clearTimeout(t); t=null; } }));
+      markBound(vipBtn);
+      safeLog('fallback bound: btnVip');
+    }
+
+    const followersBtn = $id('btnFollowers'), followersCount = $id('followersCount');
+    if(followersBtn && followersCount && !hasClickHandler(followersBtn)){
+      followersBtn.addEventListener('click', ()=> {
+        const cur = Number(followersCount.textContent||0);
+        followersCount.textContent = cur + 1;
+      });
+      markBound(followersBtn);
+      safeLog('fallback bound: btnFollowers');
+    }
+  })();
+
+  // 6) Delegated fallback for post-level actions (delete/like/comment/share)
+  // Attach once
+  if(!document.body.dataset._postDelegated){
+    document.body.addEventListener('click', function(e){
+      // find the clicked element or its parent having these classes
+      const del = e.target.closest('.delete-post');
+      if(del && !hasClickHandler(del)){
+        const card = del.closest('.post-card');
+        if(card && confirm('Delete this post?')) card.remove();
+        return;
+      }
+
+      const like = e.target.closest('.btn-like');
+      if(like && !hasClickHandler(like)){
+        const card = like.closest('.post-card');
+        if(!card) return;
+        card._likes = card._likes || {like:0};
+        card._userReaction = card._userReaction || null;
+        if(!card._userReaction){ card._likes.like++; card._userReaction = 'like'; }
+        else { card._likes.like = Math.max(0,(card._likes.like||0)-1); card._userReaction = null; }
+        const span = card.querySelector('.like-count');
+        if(span) span.textContent = Object.values(card._likes).reduce((a,b)=>a+b,0);
+        return;
+      }
+
+      const comment = e.target.closest('.btn-comment');
+      if(comment && !hasClickHandler(comment)){
+        const card = comment.closest('.post-card');
+        if(!card) return;
+        if(typeof openCommentsModal === 'function'){ try{ openCommentsModal(card); }catch(err){ console.warn(err); } }
+        else {
+          const t = prompt('Write a comment:');
+          if(t){
+            card._comments = card._comments || [];
+            card._comments.push({ id: Date.now()+'', text: t, likes:0, dislikes:0, replies:[] });
+            const cc = card.querySelector('.comment-count'); if(cc) cc.textContent = card._comments.length;
+          }
+        }
+        return;
+      }
+
+      const share = e.target.closest('.btn-share');
+      if(share && !hasClickHandler(share)){
+        const card = share.closest('.post-card'); if(!card) return;
+        const text = window.location.href + '#' + (card.dataset.postId || Date.now());
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(()=> toast ? toast('Link copied') : alert('Link copied'));
+        } else { prompt('Copy link:', text); }
+        return;
+      }
+    }, true);
+    document.body.dataset._postDelegated = '1';
+    safeLog('delegated fallback attached for post actions');
+  }
+
+  // 7) Ensure bio is editable via prompt if no other handler
+  const bioEl = $id('bioTxt');
+  if(bioEl && !bioEl.dataset._bioBound){
+    bioEl.style.cursor = 'text';
+    bioEl.addEventListener('click', ()=>{
+      const newVal = prompt('Edit bio:', bioEl.textContent||'');
+      if(newVal !== null) bioEl.textContent = newVal;
+    });
+    bioEl.dataset._bioBound = '1';
+    safeLog('bio fallback bound');
+  }
+
+  // 8) final safety: re-enable pointer events on any element accidentally set to none inline/stylesheet
+  document.querySelectorAll('*').forEach(el=>{
+    try{
+      const pe = getComputedStyle(el).pointerEvents;
+      if(pe === 'none') el.style.pointerEvents = 'auto';
+    }catch(e){}
+  });
+
+  safeLog('Universal UI repair completed');
+})();
+(function(){
+  function toast(msg, t=1200){
+    try{
+      const x=document.createElement('div'); x.textContent=msg;
+      Object.assign(x.style,{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:'24px',padding:'8px 12px',background:'#111',color:'#fff',borderRadius:'8px',zIndex:999999});
+      document.body.appendChild(x); setTimeout(()=>x.remove(), t);
+    }catch(e){}
+  }
+
+  const selectors = ['.modal','.react-popup','.overlay','.popup','.temp-overlay','[data-temp-overlay]'];
+  let removed = 0;
+  selectors.forEach(s=>{
+    document.querySelectorAll(s).forEach(el=>{ try{ el.remove(); removed++; }catch(e){} });
+  });
+
+  const vw = window.innerWidth, vh = window.innerHeight;
+  document.querySelectorAll('body *').forEach(el=>{
+    try{
+      const cs = getComputedStyle(el);
+      if(!cs) return;
+      const pos = cs.position;
+      if(!pos || (pos!=='fixed' && pos!=='absolute')) return;
+      const rect = el.getBoundingClientRect();
+      const bigEnough = (rect.width >= vw-10 && rect.height >= vh-10 && rect.top <= 5 && rect.left <= 5);
+      const z = parseInt(cs.zIndex||0,10);
+      if(bigEnough && z >= 9999){
+        el.remove();
+        removed++;
+      }
+    }catch(e){}
+  });
+
+  try{
+    document.body.style.pointerEvents = 'auto';
+    document.querySelectorAll('*').forEach(el=>{
+      if(el.style && (el.style.pointerEvents === 'none' || el.disabled === true)) {
+        try{ el.style.pointerEvents = 'auto'; el.disabled = false; }catch(e){}
+      }
+    });
+  }catch(e){}
+
+  const reenable = (sel)=>{
+    document.querySelectorAll(sel).forEach(b=>{
+      try{
+        b.disabled = false;
+        b.style.opacity = b.style.opacity || '';
+        b.style.pointerEvents = 'auto';
+      }catch(e){}
+    });
+  };
+  reenable('button');
+  reenable('a');
+  reenable('.tab');
+  reenable('.stat-box');
+
+  try{
+    window.__lastClickBlocker && (typeof window.__lastClickBlocker.remove === 'function') && window.__lastClickBlocker.remove();
+    document.querySelectorAll('[data-block-click]').forEach(e=>e.remove());
+  }catch(e){}
+
+  try{
+    const add = document.getElementById('addPostBtn');
+    if(add){
+      add.onclick = function(e){ e && e.preventDefault && e.preventDefault(); if(typeof openCreatePostModal === 'function') return openCreatePostModal(); toast('Add post (openCreatePostModal not found)'); };
+    }
+  }catch(e){}
+
+  console.log('[FIX] removed overlays/popups count:', removed);
+  toast('Fixed: overlays removed. Try buttons now');
+
+})();
+/* ==== NAVIGATION FIX — open proper pages instead of increasing numbers ==== */
+
+/* FOLLOWING → following.html */
+document.getElementById("btnFollowing").onclick = () => {
+  window.location.href = "following.html";
+};
+
+/* FOLLOWERS → followers.html */
+document.getElementById("btnFollowers").onclick = () => {
+  window.location.href = "followers.html";
+};
+
+/* VIP → vip.html */
+document.getElementById("btnVip").onclick = () => {
+  window.location.href = "vip.html";
+};
+</script>
+
+</body>
+</html>

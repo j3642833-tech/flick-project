@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>VIP</title>
+<style>
+  /* Basic layout */
+  :root{
+    --card-bg:#fff;
+    --muted:#777;
+    --accent:#ff9a00;
+    --accent-2:#ffb84d;
+    --glass:#f5f6f8;
+  }
+  *{box-sizing:border-box;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+  body{margin:0;background:#f3f3f7;color:#111; -webkit-font-smoothing:antialiased;}
+  .topbar{display:flex;align-items:center;gap:12px;padding:14px;background:#fff;border-bottom:1px solid #e6e6e9;position:sticky;top:0;z-index:10}
+  .topbar button{background:transparent;border:0;font-size:18px;cursor:pointer;padding:8px;border-radius:8px}
+  .topbar h1{font-size:18px;margin:0;flex:1;text-align:center}
+
+  .page{max-width:720px;margin:18px auto;padding:12px;}
+  .card{background:var(--card-bg);border-radius:14px;padding:18px;border:1px solid #eee;box-shadow:0 6px 20px rgba(10,10,10,0.03);}
+  .center{text-align:center}
+
+  /* crown area */
+  .crown-wrap{position:relative;width:280px;height:220px;margin:12px auto 6px;border-radius:12px;overflow:visible;display:flex;align-items:center;justify-content:center}
+  .crown-frame{
+    width:180px;height:180px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:transparent; /* removed crown bg as requested */
+    position:relative; z-index:2;
+    border:8px solid rgba(255,255,255,0.6); box-shadow:0 8px 30px rgba(10,10,10,0.06);
+  }
+  .crown-frame img{width:130px;height:130px;object-fit:cover;border-radius:50%;display:block}
+
+  /* crystals orbit - small crystals around crown */
+  .crystals{
+    position:absolute;inset:0;pointer-events:none;
+    display:block;z-index:1;
+  }
+  .crystal{
+    position:absolute;width:14px;height:14px;border-radius:50%;
+    background:linear-gradient(180deg,#bfeaff,#8fd8ff);
+    box-shadow:0 0 10px rgba(143,216,255,0.18);
+    opacity:.22; transform:translate(-50%,-50%) scale(.9);
+    transition:transform .28s ease,opacity .25s ease,box-shadow .25s ease,background .22s ease;
+    filter:blur(0);
+  }
+  .crystal.on{
+    opacity:1;
+    transform:translate(-50%,-50%) scale(1.12);
+    box-shadow:0 0 18px rgba(143,216,255,0.9),0 6px 30px rgba(143,216,255,0.12);
+    background:linear-gradient(180deg,#7ef,#38b6ff);
+  }
+
+  /* crown gem glow (when VIP rank up) */
+  .crown-glow{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;
+    width:160px;height:160px;border-radius:50%;z-index:0;opacity:0;transition:opacity .5s ease;
+    background:radial-gradient(circle at 40% 30%, rgba(255,80,70,0.12), transparent 18%),
+               radial-gradient(circle at 60% 70%, rgba(255,190,60,0.08), transparent 22%);
+  }
+  .crown-glow.active{opacity:1; animation:gemPulse .9s ease-in-out 1;}
+
+  @keyframes gemPulse{
+    0%{transform:translate(-50%,-50%) scale(.9);opacity:.6}
+    50%{transform:translate(-50%,-50%) scale(1.06);opacity:1}
+    100%{transform:translate(-50%,-50%) scale(1);opacity:.9}
+  }
+
+  /* Status row */
+  .status-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px}
+  .vip-level{font-weight:800;font-size:20px}
+  .xp-text{color:var(--muted);margin-left:6px}
+
+  /* progress bar */
+  .progress-wrap{margin-top:12px;padding:0 18px}
+  .progress-bar{width:100%;height:14px;border-radius:12px;background:#eee;overflow:hidden}
+  .progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .45s ease}
+
+  .hint{color:#666;font-size:13px;margin-top:10px;text-align:center;padding:0 18px}
+
+  /* purchase list */
+  .buy-list{margin-top:16px;display:flex;flex-direction:column;gap:12px}
+  .buy-item{display:flex;justify-content:space-between;align-items:center;padding:14px;border-radius:12px;border:1px solid #eee;background:#fff}
+  .buy-item .title{font-weight:700}
+  .buy-item .price{color:#666;margin-top:6px;font-size:13px}
+  .buy-btn{background:#111;color:#fff;border:0;padding:10px 14px;border-radius:12px;cursor:pointer}
+
+  /* reset dev button */
+  .reset-dev{position:absolute;right:18px;top:8px;padding:8px 12px;border-radius:10px;background:#111;color:#fff;border:0;cursor:pointer}
+
+  /* small helpers */
+  .muted{color:var(--muted)} 
+  footer{height:80px}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <button id="backBtn" aria-label="back">←</button>
+    <h1>VIP</h1>
+    <div style="width:36px"></div>
+  </div>
+
+  <main class="page">
+    <div class="card center" style="position:relative;overflow:visible">
+      <div style="font-size:20px;font-weight:800;margin-bottom:8px">VIP Status</div>
+
+      <div class="crown-wrap" aria-hidden="false">
+        <!-- crystals layer -->
+        <div class="crystals" id="crystalLayer" aria-hidden="true"></div>
+
+        <!-- crown glow effect -->
+        <div id="crownGlow" class="crown-glow"></div>
+
+        <!-- crown image inside circular frame (profile should appear above later) -->
+        <div class="crown-frame" id="crownFrame" title="VIP crown">
+          <!-- replace filename below with the crown image you added to the project -->
+          <img id="crownImg" src="./97bf33e6838defe7dd9560d899a2c7b1.jpg" alt="VIP crown">
+        </div>
+
+        <!-- dev reset -->
+        <button id="resetDev" class="reset-dev" title="reset (dev)">Reset (dev)</button>
+      </div>
+
+      <div class="status-row">
+        <div class="vip-level" id="vipLevel">VIP 0</div>
+        <div class="xp-text" id="xpText">0 / 1000 XP</div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-bar" aria-hidden="true">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <div class="hint">Small crystals around the crown light up as you buy XP. When all light, the crown gems pulse and you gain VIP rank.</div>
+
+      <div class="buy-list" id="buyList">
+        <div class="buy-item">
+          <div>
+            <div class="title">Buy 100 XP</div>
+            <div class="price muted">$0.99</div>
+          </div>
+          <button class="buy-btn" data-xp="100">Buy</button>
+        </div>
+
+        <div class="buy-item">
+          <div>
+            <div class="title">Buy 250 XP</div>
+            <div class="price muted">$1.99</div>
+          </div>
+          <button class="buy-btn" data-xp="250">Buy</button>
+        </div>
+
+        <div class="buy-item">
+          <div>
+            <div class="title">Buy 600 XP</div>
+            <div class="price muted">$4.99</div>
+          </div>
+          <button class="buy-btn" data-xp="600">Buy</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+<script>
+/*
+  VIP logic:
+   - crystalsCount = number of small orbit crystals (visual division for level progress)
+   - each VIP level requires baseXP * (1 + vipLevel*multiplier) or uses a single xpToNext variable
+   - purchases add XP, fill crystals one-by-one; when xp >= xpToNext -> level up:
+       * crown glow pulse
+       * increment vip level
+       * subtract xpToNext from xp (carry remaining XP)
+       * reset crystals and compute next xpToNext
+   - state persisted in localStorage under key 'vip_state'
+*/
+
+(function(){
+  const STORAGE_KEY = 'vip_state_v1';
+  const crystalLayer = document.getElementById('crystalLayer');
+  const progressFill = document.getElementById('progressFill');
+  const vipLevelEl = document.getElementById('vipLevel');
+  const xpText = document.getElementById('xpText');
+  const crownGlow = document.getElementById('crownGlow');
+  const crownImg = document.getElementById('crownImg');
+  const resetDev = document.getElementById('resetDev');
+
+  // config
+  const crystalsCount = 8;           // number of crystals orbiting crown
+  const baseXpToNext = 1000;         // initial xp required to reach VIP1
+  const levelMultiplier = 1.25;      // next level xp = Math.round(baseXpToNext * (levelMultiplier ** level))
+  const crystalColor = ['#7ef','#38b6ff']; // gradient base for on-state
+
+  // load or init
+  let state = loadState();
+
+  // build crystals positions
+  const crystals = [];
+  function buildCrystals(){
+    crystalLayer.innerHTML = '';
+    const r = 95; // radius for orbit
+    for(let i=0;i<crystalsCount;i++){
+      const el = document.createElement('div');
+      el.className = 'crystal';
+      // position in circle
+      const angle = (i / crystalsCount) * Math.PI * 2 - Math.PI/2; // start top
+      const cx = 50 + Math.cos(angle) * r/1.6; // percent relative
+      const cy = 50 + Math.sin(angle) * r/1.6;
+      el.style.left = cx + '%';
+      el.style.top = cy + '%';
+      el.dataset.index = i;
+      crystalLayer.appendChild(el);
+      crystals.push(el);
+    }
+  }
+
+  // xp to next level compute
+  function xpToNextFor(level){
+    return Math.round(baseXpToNext * Math.pow(levelMultiplier, level));
+  }
+
+  // render UI from state
+  function render(){
+    const {vipLevel,xp} = state;
+    const xpToNext = xpToNextFor(vipLevel);
+    // update text
+    vipLevelEl.textContent = 'VIP ' + vipLevel;
+    xpText.textContent = `${xp} / ${xpToNext} XP`;
+
+    // progress percent
+    const percent = Math.min(100, Math.floor((xp / xpToNext) * 100));
+    progressFill.style.width = percent + '%';
+
+    // compute crystals lit: fraction of crystalsCount
+    const fraction = Math.min(1, xp / xpToNext);
+    const lit = Math.floor(fraction * crystalsCount + 0.00001);
+
+    // light crystals one by one
+    crystals.forEach((c, idx)=>{
+      if(idx < lit) c.classList.add('on'); else c.classList.remove('on');
+    });
+
+    // crown glow only when recently leveled (handled elsewhere)
+    // also adjust crown image subtle filter based on vipLevel (more golden)
+    const tone = Math.min(1, vipLevel / 40);
+    crownImg.style.filter = `drop-shadow(0 6px 24px rgba(0,0,0,0.12)) saturate(${1 + tone})`;
+  }
+
+  // add xp and handle level-up
+  function addXp(amount){
+    if(!amount || typeof amount !== 'number') return;
+    state.xp += amount;
+    // check level-ups loop (in case large purchase)
+    while(state.xp >= xpToNextFor(state.vipLevel)){
+      // consume xpToNext
+      const required = xpToNextFor(state.vipLevel);
+      state.xp -= required;
+      state.vipLevel++;
+      // trigger crown gem pulse
+      pulseCrown();
+    }
+    saveState();
+    render();
+  }
+
+  // crown pulse effect (on full crystals -> gem glow)
+  function pulseCrown(){
+    crownGlow.classList.add('active');
+    // brief extra visual on crown image (red gem highlight)
+    crownImg.style.transition = 'filter .35s ease';
+    crownImg.style.filter = 'drop-shadow(0 10px 30px rgba(255,120,60,0.18)) saturate(1.25)';
+    setTimeout(()=>{
+      crownGlow.classList.remove('active');
+      // restore style (render will set filter)
+      crownImg.style.filter = '';
+      render();
+    }, 900);
+  }
+
+  // localStorage
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){}
+    return { vipLevel: 0, xp: 0 };
+  }
+  function saveState(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  }
+  function resetState(){
+    state = { vipLevel: 0, xp: 0 };
+    saveState();
+    render();
+  }
+
+  // wire buy buttons
+  function wireBuyButtons(){
+    document.querySelectorAll('.buy-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const xp = Number(btn.dataset.xp || 0);
+        // simulated purchase: just add xp
+        addXp(xp);
+      });
+    });
+  }
+
+  // set up crystals and initial render
+  buildCrystals();
+  render();
+  wireBuyButtons();
+
+  // dev reset
+  resetDev.addEventListener('click', ()=> {
+    if(confirm('Reset VIP state? (dev)')) { resetState(); }
+  });
+
+  // back button simple history
+  document.getElementById('backBtn').addEventListener('click', ()=> history.back());
+
+  /* Expose a small API on window so other pages can toggle site-wide vip border */
+  window.VIP = {
+    getState: () => ({...state}),
+    addXp: (n) => { addXp(Number(n||0)); },
+    setState: (s) => { state = Object.assign(state, s); saveState(); render(); }
+  };
+
+  // In case the crown image is missing show a subtle placeholder border (but no background)
+  crownImg.onerror = () => {
+    crownImg.style.background = '#f5f6f8';
+    crownImg.style.display = 'block';
+    crownImg.alt = 'VIP crown';
+  };
+
+})();
+</script>
+</body>
+</html>
+```0
